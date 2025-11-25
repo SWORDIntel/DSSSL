@@ -1,0 +1,28 @@
+[Unit]
+Description=DSSSL Telemetry Collector
+Documentation=https://github.com/SWORDIntel/DSSSL
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/dsssl-world/bin/dsssl-telemetry-collector
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/dsssl /var/log/dsssl
+
+# Resource limits
+MemoryMax=256M
+TasksMax=10
+
+# Environment
+Environment="DSMIL_EVENT_SOCKET=/run/dsssl/crypto-events.sock"
+Environment="DSMIL_LOG_DIR=/var/log/dsssl"
+
+[Install]
+WantedBy=multi-user.target
