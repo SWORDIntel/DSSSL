@@ -1,3 +1,9 @@
+<!-- File: artifact/codex.md -->
+
+<p align="center">
+  <img src="assets/DSSSL.png" alt="DSSSL Logo" width="320"/>
+</p>
+
 # DSSSL - DSMIL-Grade OpenSSL
 
 **Post-Quantum Cryptography | Hardware-Backed Security | Multi-Profile Architecture**
@@ -166,6 +172,7 @@ make test
 - [docs/PHASES_2-5_SUMMARY.md](docs/PHASES_2-5_SUMMARY.md) - Policy, Events, Hybrid
 - [docs/PHASE8_COMPREHENSIVE_TESTING.md](docs/PHASE8_COMPREHENSIVE_TESTING.md) - Testing guide
 - [docs/PHASE9_DEPLOYMENT_SUMMARY.md](docs/PHASE9_DEPLOYMENT_SUMMARY.md) - Deployment guide
+
 ### Technical Guides
 - [docs/CSNA_SIDE_CHANNEL_HARDENING.md](docs/CSNA_SIDE_CHANNEL_HARDENING.md) - Constant-time programming
 - [docs/TPM_INTEGRATION.md](docs/TPM_INTEGRATION.md) - TPM2 hardware integration
@@ -263,7 +270,7 @@ Based on 37 security validation tests:
 
 **DO NOT** file public issues for security vulnerabilities.
 
-**Contact**: Use internal DoD secure channels or email security team.
+**Contact**: Contact me directly for reporting issues.
 
 ---
 
@@ -301,10 +308,10 @@ Based on 37 security validation tests:
 
 ## 📊 Statistics
 
-**Code**: ~8,700 lines of implementation
-**Tests**: 342+ automated tests (98%+ pass rate)
-**Documentation**: 16 docs, ~210 pages
-**Algorithms**: 88 TPM2-compatible
+**Code**: ~8,700 lines of implementation  
+**Tests**: 342+ automated tests (98%+ pass rate)  
+**Documentation**: 16 docs, ~210 pages  
+**Algorithms**: 88 TPM2-compatible  
 **Security Score**: 100%
 
 ---
@@ -322,8 +329,8 @@ External contributions not currently accepted.
 
 ## 📄 License
 
-**License**: Proprietary DoD License
-**Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY
+**License**: Proprietary DoD License  
+**Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY  
 **Distribution**: Authorized DoD personnel and contractors only
 
 ---
@@ -347,8 +354,8 @@ External contributions not currently accepted.
 
 ---
 
-**Version**: 1.0.0 (Phases 1-9 Complete - Production Ready)
-**Last Updated**: 2025-11-25
-**Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY
+**Version**: 1.0.0 (Phases 1-9 Complete - Production Ready)  
+**Last Updated**: 2025-11-25  
+**Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY  
 
 **For original OpenSSL documentation, see [docs/openssl-original/](docs/openssl-original/)**
