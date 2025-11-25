@@ -37,7 +37,7 @@ Date: 2025-11-25
 
 #### Phase 1-5: Core Implementation
 
-4. **[PHASES_2-5_SUMMARY.md](PHASES_2-5_SUMMARY.md)** - Policy, Events, Hybrid Crypto
+4. **[docs/PHASES_2-5_SUMMARY.md](docs/PHASES_2-5_SUMMARY.md)** - Policy, Events, Hybrid Crypto
    - Phase 2: Policy provider implementation
    - Phase 3: Event telemetry system
    - Phase 5: Hybrid cryptography documentation
@@ -170,7 +170,7 @@ Date: 2025-11-25
 → [TESTING.md](docs/TESTING.md#troubleshooting) + Profile-specific guides
 
 **Review implementation phases**
-→ [PHASES_2-5_SUMMARY.md](PHASES_2-5_SUMMARY.md) + Phase 6-8 docs
+→ [docs/PHASES_2-5_SUMMARY.md](docs/PHASES_2-5_SUMMARY.md) + Phase 6-9 docs
 
 ---
 
