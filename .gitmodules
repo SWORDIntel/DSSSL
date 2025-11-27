@@ -12,7 +12,7 @@
 	update = rebase
 [submodule "wycheproof"]
 	path = wycheproof
-	url = https://github.com/google/wycheproof
+	url = https://github.com/SWORDIntel/DSWycheproof
 [submodule "tlsfuzzer"]
 	path = tlsfuzzer
 	url = https://github.com/tlsfuzzer/tlsfuzzer
