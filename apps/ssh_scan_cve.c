@@ -154,6 +154,44 @@ void check_weak_algos(TargetInfo *info) {
     }
 }
 
+/* CVE-2025-9230: OpenSSL CMS Decryption */
+void check_cve_2025_9230(TargetInfo *info) {
+    printf("\n[*] Testing for CVE-2025-9230 (OpenSSL CMS)...\n");
+    if (str_contains_ignore_case(info->banner, "OpenSSL")) {
+        printf("[?] OpenSSL version detected in banner. Check against vulnerable versions (3.0 < 3.0.18 etc).\n");
+        printf("[?] Potential Vulnerability: CVE-2025-9230 (High)\n");
+    } else {
+        printf("[*] OpenSSL version not explicitly advertised\n");
+    }
+}
+
+/* Windows LPE CVEs */
+void check_windows_lpe_cves(TargetInfo *info) {
+    printf("\n[*] Testing for Windows OpenSSL Configuration LPEs...\n");
+    if (str_contains_ignore_case(info->banner, "Windows") || str_contains_ignore_case(info->banner, "Microsoft")) {
+        printf("[+] Windows system detected\n");
+        printf("[!] Potential Vulnerabilities (Manual Verification Required):\n");
+        printf("    - CVE-2025-35471 (conda-forge)\n");
+        printf("    - CVE-2025-2768/2769 (Bdrive NetDrive)\n");
+        printf("    - CVE-2025-5480 (Action1)\n");
+        printf("    - CVE-2025-8069 (AWS Client VPN)\n");
+        printf("    - CVE-2025-8614 (NoMachine)\n");
+    } else {
+        printf("[*] Target does not appear to be Windows\n");
+    }
+}
+
+/* CVE-2025-2263: Sante PACS */
+void check_cve_2025_2263(TargetInfo *info) {
+    printf("\n[*] Testing for CVE-2025-2263 (Sante PACS)...\n");
+    if (str_contains_ignore_case(info->banner, "Sante") || str_contains_ignore_case(info->banner, "PACS")) {
+        printf("[!] CRITICAL: Possible Sante PACS Server Detected\n");
+        printf("[!] CVE-2025-2263: Stack-based buffer overflow possible\n");
+    } else {
+        printf("[*] Target does not appear to be Sante PACS\n");
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <host> [port]\n", argv[0]);
@@ -229,6 +267,9 @@ int main(int argc, char *argv[]) {
     check_eddsa_malleability(&info);
     check_ecdsa_leading_zero(&info);
     check_weak_algos(&info);
+    check_cve_2025_9230(&info);
+    check_windows_lpe_cves(&info);
+    check_cve_2025_2263(&info);
     
     printf("\n================================================================================\n");
     printf("SCAN COMPLETE\n");
