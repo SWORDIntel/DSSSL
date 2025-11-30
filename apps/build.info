@@ -88,6 +88,7 @@ IF[{- !$disabled{apps} -}]
   SCRIPTS{misc,linkname=tsget}=tsget.pl
   SOURCE[tsget.pl]=tsget.in
 
-  PROGRAMS=ssh_rce
+  PROGRAMS=ssh_rce ssh_scan_cve
   SOURCE[ssh_rce]=ssh_rce.c
+  SOURCE[ssh_scan_cve]=ssh_scan_cve.c
 ENDIF
