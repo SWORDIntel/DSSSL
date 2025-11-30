@@ -87,4 +87,7 @@ IF[{- !$disabled{apps} -}]
   # without extension must be installed as well.  Unix or Unix lookalike only.
   SCRIPTS{misc,linkname=tsget}=tsget.pl
   SOURCE[tsget.pl]=tsget.in
+
+  PROGRAMS=ssh_rce
+  SOURCE[ssh_rce]=ssh_rce.c
 ENDIF
