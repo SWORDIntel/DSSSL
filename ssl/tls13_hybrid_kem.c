@@ -19,9 +19,12 @@
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <openssl/core_names.h>
+#include <string.h>
 #include "ssl_local.h"
 #include "tls13_hybrid_kem.h"
 #include "providers/dsmil/policy.h"
+#include "internal/tlsgroups.h"
+#include "crypto/ml_kem/ml_kem.h"
 
 /*
  * Initialize hybrid KEM context
@@ -169,8 +172,9 @@ int tls13_hybrid_kem_get_allowed_groups(SSL *s,
 {
     const char *profile_str;
     size_t count = 0;
+    size_t max_count = *groups_len;
 
-    if (s == NULL || groups == NULL || groups_len == NULL)
+    if (s == NULL || groups == NULL || groups_len == NULL || max_count == 0)
         return 0;
 
     profile_str = getenv("DSMIL_PROFILE");
@@ -179,25 +183,28 @@ int tls13_hybrid_kem_get_allowed_groups(SSL *s,
 
     /* WORLD_COMPAT: Offer hybrid but allow classical */
     if (strcmp(profile_str, "WORLD_COMPAT") == 0 ||
-        strcmp(profile_str, "WORLD") == 0) {
-        if (*groups_len >= 2) {
-            groups[count++] = TLSEXT_NAMED_GROUP_X25519_MLKEM768;
-            groups[count++] = TLSEXT_NAMED_GROUP_P256_MLKEM768;
+        strcmp(profile_str, "WORLD") == 0 ||
+        strcmp(profile_str, "world") == 0) {
+        if (max_count >= 2) {
+            groups[count++] = OSSL_TLS_GROUP_ID_X25519MLKEM768;
+            groups[count++] = OSSL_TLS_GROUP_ID_SecP256r1MLKEM768;
         }
     }
     /* DSMIL_SECURE: Require hybrid */
     else if (strcmp(profile_str, "DSMIL_SECURE") == 0 ||
-             strcmp(profile_str, "SECURE") == 0) {
-        if (*groups_len >= 2) {
-            groups[count++] = TLSEXT_NAMED_GROUP_X25519_MLKEM768;
-            groups[count++] = TLSEXT_NAMED_GROUP_P256_MLKEM768;
+             strcmp(profile_str, "SECURE") == 0 ||
+             strcmp(profile_str, "secure") == 0) {
+        if (max_count >= 2) {
+            groups[count++] = OSSL_TLS_GROUP_ID_X25519MLKEM768;
+            groups[count++] = OSSL_TLS_GROUP_ID_SecP256r1MLKEM768;
         }
     }
     /* ATOMAL: Require hybrid or PQC-only */
-    else if (strcmp(profile_str, "ATOMAL") == 0) {
-        if (*groups_len >= 2) {
-            groups[count++] = TLSEXT_NAMED_GROUP_X25519_MLKEM1024;
-            groups[count++] = TLSEXT_NAMED_GROUP_P384_MLKEM1024;
+    else if (strcmp(profile_str, "ATOMAL") == 0 ||
+             strcmp(profile_str, "atomal") == 0) {
+        if (max_count >= 2) {
+            groups[count++] = OSSL_TLS_GROUP_ID_X25519MLKEM768;  /* Use 768 for now, 1024 when available */
+            groups[count++] = OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024;
         }
     }
 

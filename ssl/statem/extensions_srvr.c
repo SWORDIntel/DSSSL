@@ -12,6 +12,51 @@
 #include "statem_local.h"
 #include "internal/cryptlib.h"
 #include "internal/ssl_unwrap.h"
+#include "../tls13_hybrid_kem.h"
+#include "internal/tlsgroups.h"
+
+/*
+ * Check if a group ID is a hybrid KEM group
+ */
+static int is_hybrid_kem_group(uint16_t group_id)
+{
+    return (group_id == OSSL_TLS_GROUP_ID_X25519MLKEM768 ||
+            group_id == OSSL_TLS_GROUP_ID_SecP256r1MLKEM768 ||
+            group_id == OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024);
+}
+
+/*
+ * Get classical group ID from hybrid group ID
+ */
+static uint16_t get_classical_group_from_hybrid(uint16_t hybrid_group_id)
+{
+    switch (hybrid_group_id) {
+    case OSSL_TLS_GROUP_ID_X25519MLKEM768:
+        return OSSL_TLS_GROUP_ID_x25519;
+    case OSSL_TLS_GROUP_ID_SecP256r1MLKEM768:
+        return OSSL_TLS_GROUP_ID_secp256r1;
+    case OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024:
+        return OSSL_TLS_GROUP_ID_secp384r1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Get PQC group ID from hybrid group ID
+ */
+static uint16_t get_pqc_group_from_hybrid(uint16_t hybrid_group_id)
+{
+    switch (hybrid_group_id) {
+    case OSSL_TLS_GROUP_ID_X25519MLKEM768:
+    case OSSL_TLS_GROUP_ID_SecP256r1MLKEM768:
+        return OSSL_TLS_GROUP_ID_mlkem768;
+    case OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024:
+        return OSSL_TLS_GROUP_ID_mlkem1024;
+    default:
+        return 0;
+    }
+}
 
 #define COOKIE_STATE_FORMAT_VERSION     1
 
@@ -629,6 +674,91 @@ static int tls_accept_ksgroup(SSL_CONNECTION *s, uint16_t ksgroup, PACKET *encod
     s->s3.group_id_candidate = ksgroup;
     /* Cache the selected group ID in the SSL_SESSION */
     s->session->kex_group = ksgroup;
+
+    /* Handle hybrid KEM groups specially */
+    if (is_hybrid_kem_group(ksgroup)) {
+        PACKET classical_pubkey, pqc_pubkey;
+        uint16_t classical_group_id, pqc_group_id;
+        EVP_PKEY *classical_peer = NULL, *pqc_peer = NULL;
+        int ret = 0;
+
+        classical_group_id = get_classical_group_from_hybrid(ksgroup);
+        pqc_group_id = get_pqc_group_from_hybrid(ksgroup);
+
+        if (classical_group_id == 0 || pqc_group_id == 0) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            return 0;
+        }
+
+        /* Parse hybrid key share: [classical_pubkey][pqc_pubkey] */
+        /* Note: Both are length-prefixed in the original encoding */
+        /* For now, assume fixed sizes: X25519=32, P-256=65, ML-KEM-768=1184 */
+        size_t classical_len, pqc_len;
+        
+        /* TODO: Parse length-prefixed public keys from encoded_pubkey */
+        /* For now, use fixed sizes based on group */
+        if (classical_group_id == OSSL_TLS_GROUP_ID_x25519) {
+            classical_len = 32;
+        } else {
+            classical_len = 65;  /* P-256 uncompressed */
+        }
+        
+        if (pqc_group_id == OSSL_TLS_GROUP_ID_mlkem768) {
+            pqc_len = 1184;  /* ML-KEM-768 public key */
+        } else {
+            pqc_len = 1568;  /* ML-KEM-1024 public key */
+        }
+
+        if (PACKET_remaining(encoded_pubkey) < classical_len + pqc_len) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+
+        /* Extract classical public key */
+        if (!PACKET_get_bytes(encoded_pubkey, NULL, classical_len)) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+
+        /* Extract PQC public key */
+        if (!PACKET_get_bytes(encoded_pubkey, NULL, pqc_len)) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+
+        /* Generate classical peer key */
+        if ((classical_peer = ssl_generate_param_group(s, classical_group_id)) == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNABLE_TO_FIND_ECDH_PARAMETERS);
+            goto err;
+        }
+
+        /* Generate PQC peer key */
+        if ((pqc_peer = ssl_generate_param_group(s, pqc_group_id)) == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNABLE_TO_FIND_ECDH_PARAMETERS);
+            goto err;
+        }
+
+        /* Set encoded public keys */
+        /* TODO: Use actual parsed public keys */
+        /* For now, store peer keys for later use */
+        s->s3.peer_tmp = classical_peer;  /* Store classical as primary */
+        /* TODO: Store pqc_peer in hybrid KEM context */
+
+        ret = 1;
+        goto done;
+
+    err:
+        if (classical_peer != NULL)
+            EVP_PKEY_free(classical_peer);
+        if (pqc_peer != NULL)
+            EVP_PKEY_free(pqc_peer);
+        return 0;
+
+    done:
+        return ret;
+    }
+
+    /* Standard single-group key share */
     if ((s->s3.peer_tmp = ssl_generate_param_group(s, ksgroup)) == NULL) {
         SSLfatal(s,
                  SSL_AD_INTERNAL_ERROR,
