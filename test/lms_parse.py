@@ -18,11 +18,14 @@ import json
 import argparse
 import datetime
 
+
 def print_label(label, value):
     print(label + " = " + value)
 
+
 def print_hexlabel(label, tag, value):
     print(label + " = hex" + tag + ":" + value)
+
 
 def parse_lms_sig_ver(groups):
     for grp in groups:
@@ -35,45 +38,48 @@ def parse_lms_sig_ver(groups):
             continue
 
         print_label("Title", lmsmode + " " + lmotsmode)
-        print("");
+        print("")
         print_label("PublicKeyRaw", name + ":" + "LMS" + ":" + pubkey)
-        for tst in grp['tests']:
-            testname = lmsmode + "_" + str(tst['tcId'])
-            print("");
+        for tst in grp["tests"]:
+            testname = lmsmode + "_" + str(tst["tcId"])
+            print("")
             if "reason" in tst:
-                print("# " + tst['reason'])
+                print("# " + tst["reason"])
             print_label("FIPSversion", ">=3.6.0")
             print_label("Verify-Message-Public", "LMS:" + name)
-            print_label("Input", tst['message'])
-            print_label("Output", tst['signature'])
-            if not tst['testPassed']:
+            print_label("Input", tst["message"])
+            print_label("Output", tst["signature"])
+            if not tst["testPassed"]:
                 print_label("Result", "VERIFY_ERROR")
 
+
 parser = argparse.ArgumentParser(description="")
-parser.add_argument('filename', type=str)
+parser.add_argument("filename", type=str)
 args = parser.parse_args()
 
 # Open and read the JSON file
-with open(args.filename, 'r') as file:
+with open(args.filename, "r") as file:
     data = json.load(file)
 
 year = datetime.date.today().year
-version = data['vsId']
-revision = data['revision']
-algorithm = data['algorithm']
+version = data["vsId"]
+revision = data["revision"]
+algorithm = data["algorithm"]
 
 print("# Copyright " + str(year) + " The OpenSSL Project Authors. All Rights Reserved.")
 print("#")
-print("# Licensed under the Apache License 2.0 (the \"License\").  You may not use")
+print('# Licensed under the Apache License 2.0 (the "License").  You may not use')
 print("# this file except in compliance with the License.  You can obtain a copy")
 print("# in the file LICENSE in the source distribution or at")
 print("# https://www.openssl.org/source/license.html\n")
 print("# ACVP test data for " + algorithm + " generated from")
-print("# https://raw.githubusercontent.com/usnistgov/ACVP-Server/refs/heads/master/gen-val/json-files/LMS-sigVer-1.0/internalProjection.json")
+print(
+    "# https://raw.githubusercontent.com/usnistgov/ACVP-Server/refs/heads/master/gen-val/json-files/LMS-sigVer-1.0/internalProjection.json"
+)
 print("# [version " + str(version) + " : revision " + str(revision) + "]")
 print("")
 
 if algorithm == "LMS":
-    parse_lms_sig_ver(data['testGroups'])
+    parse_lms_sig_ver(data["testGroups"])
 else:
     print("Unsupported algorithm " + algorithm)

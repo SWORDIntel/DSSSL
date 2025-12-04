@@ -27,26 +27,34 @@ if not os.path.isdir(FUZZER_DIR):
 
 corpora = []
 
+
 def _create(d):
     dd = os.path.abspath(os.path.join(CORPORA_DIR, d))
     if not os.path.isdir(dd):
         os.mkdir(dd)
     corpora.append(dd)
 
+
 def _add(d):
     dd = os.path.abspath(os.path.join(CORPORA_DIR, d))
     if os.path.isdir(dd):
         corpora.append(dd)
+
 
 def main():
     _create(FUZZER)
     _create(FUZZER + "-crash")
     _add(FUZZER + "-seed")
 
-    cmd = ([os.path.abspath(os.path.join(THIS_DIR, FUZZER))]  + sys.argv[2:]
-           + ["-artifact_prefix=" + corpora[1] + "/"] + corpora)
+    cmd = (
+        [os.path.abspath(os.path.join(THIS_DIR, FUZZER))]
+        + sys.argv[2:]
+        + ["-artifact_prefix=" + corpora[1] + "/"]
+        + corpora
+    )
     print(" ".join(cmd))
     subprocess.call(cmd)
+
 
 if __name__ == "__main__":
     main()
