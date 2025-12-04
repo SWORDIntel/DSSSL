@@ -137,7 +137,7 @@ echo ""
     no-weak-ssl-ciphers \
     enable-tls1_3 \
     no-comp \
-    --with-rand-seed=rdcpu,rdseed,devrandom \
+    --with-rand-seed=rdcpu,devrandom \
     threads \
     shared
 
