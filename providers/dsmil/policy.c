@@ -51,21 +51,30 @@ DSMIL_POLICY_CTX *dsmil_policy_ctx_new(OSSL_LIB_CTX *libctx)
 
     /* Check environment for profile override */
     profile_env = getenv("DSMIL_PROFILE");
-    if (profile_env != NULL) {
-        dsmil_policy_set_profile_str(ctx, profile_env);
+    if (profile_env != NULL && strlen(profile_env) > 0) {
+        if (!dsmil_policy_set_profile_str(ctx, profile_env)) {
+            /* Invalid profile in environment - already logged by set_profile_str */
+            /* Continue with default WORLD_COMPAT */
+        }
     }
 
     /* Check THREATCON level */
     threatcon_env = getenv("THREATCON_LEVEL");
-    if (threatcon_env != NULL) {
-        if (strcmp(threatcon_env, "ELEVATED") == 0)
+    if (threatcon_env != NULL && strlen(threatcon_env) > 0) {
+        if (strcmp(threatcon_env, "ELEVATED") == 0 ||
+            strcmp(threatcon_env, "elevated") == 0) {
             ctx->threatcon = DSMIL_THREATCON_ELEVATED;
-        else if (strcmp(threatcon_env, "HIGH") == 0)
+        } else if (strcmp(threatcon_env, "HIGH") == 0 ||
+                   strcmp(threatcon_env, "high") == 0) {
             ctx->threatcon = DSMIL_THREATCON_HIGH;
-        else if (strcmp(threatcon_env, "SEVERE") == 0)
+        } else if (strcmp(threatcon_env, "SEVERE") == 0 ||
+                   strcmp(threatcon_env, "severe") == 0) {
             ctx->threatcon = DSMIL_THREATCON_SEVERE;
-        else
+        } else {
+            fprintf(stderr, "DSMIL Policy: Warning - Invalid THREATCON_LEVEL '%s', using NORMAL\n",
+                    threatcon_env);
             ctx->threatcon = DSMIL_THREATCON_NORMAL;
+        }
     } else {
         ctx->threatcon = DSMIL_THREATCON_NORMAL;
     }
@@ -148,14 +157,38 @@ int dsmil_policy_set_profile_str(DSMIL_POLICY_CTX *ctx, const char *profile_str)
     if (ctx == NULL || profile_str == NULL)
         return 0;
 
-    if (strcmp(profile_str, DSMIL_PROFILE_NAME_WORLD) == 0)
+    /* Validate and normalize profile string */
+    if (strcmp(profile_str, DSMIL_PROFILE_NAME_WORLD) == 0 ||
+        strcmp(profile_str, "WORLD_COMPAT") == 0 ||
+        strcmp(profile_str, "world") == 0 ||
+        strcmp(profile_str, "WORLD") == 0) {
         return dsmil_policy_set_profile(ctx, DSMIL_PROFILE_WORLD_COMPAT);
-    else if (strcmp(profile_str, DSMIL_PROFILE_NAME_SECURE) == 0)
+    } else if (strcmp(profile_str, DSMIL_PROFILE_NAME_SECURE) == 0 ||
+               strcmp(profile_str, "DSMIL_SECURE") == 0 ||
+               strcmp(profile_str, "secure") == 0 ||
+               strcmp(profile_str, "SECURE") == 0) {
         return dsmil_policy_set_profile(ctx, DSMIL_PROFILE_DSMIL_SECURE);
-    else if (strcmp(profile_str, DSMIL_PROFILE_NAME_ATOMAL) == 0)
+    } else if (strcmp(profile_str, DSMIL_PROFILE_NAME_ATOMAL) == 0 ||
+               strcmp(profile_str, "atomal") == 0 ||
+               strcmp(profile_str, "ATOMAL") == 0) {
         return dsmil_policy_set_profile(ctx, DSMIL_PROFILE_ATOMAL);
+    } else {
+        /* Invalid profile - log warning and use default */
+        fprintf(stderr, "DSMIL Policy: Warning - Invalid profile '%s', using WORLD_COMPAT\n",
+                profile_str);
+        return dsmil_policy_set_profile(ctx, DSMIL_PROFILE_WORLD_COMPAT);
+    }
+}
 
-    return 0;
+/*
+ * Get current profile
+ */
+DSMIL_PROFILE dsmil_policy_get_profile(const DSMIL_POLICY_CTX *ctx)
+{
+    if (ctx == NULL)
+        return DSMIL_PROFILE_WORLD_COMPAT;
+
+    return ctx->profile;
 }
 
 /*

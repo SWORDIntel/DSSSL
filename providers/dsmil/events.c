@@ -55,6 +55,67 @@ static void get_iso_timestamp(char *buf, size_t buflen)
 }
 
 /*
+ * Escape JSON string to prevent injection
+ * Escapes: ", \, \n, \r, \t, and control characters
+ */
+static size_t json_escape_string(char *out, size_t out_size, const char *in)
+{
+    size_t i = 0, j = 0;
+    
+    if (out == NULL || in == NULL || out_size == 0)
+        return 0;
+    
+    while (in[i] != '\0' && j < out_size - 1) {
+        switch (in[i]) {
+        case '"':
+            if (j + 2 < out_size) {
+                out[j++] = '\\';
+                out[j++] = '"';
+            }
+            break;
+        case '\\':
+            if (j + 2 < out_size) {
+                out[j++] = '\\';
+                out[j++] = '\\';
+            }
+            break;
+        case '\n':
+            if (j + 2 < out_size) {
+                out[j++] = '\\';
+                out[j++] = 'n';
+            }
+            break;
+        case '\r':
+            if (j + 2 < out_size) {
+                out[j++] = '\\';
+                out[j++] = 'r';
+            }
+            break;
+        case '\t':
+            if (j + 2 < out_size) {
+                out[j++] = '\\';
+                out[j++] = 't';
+            }
+            break;
+        default:
+            /* Control characters (0x00-0x1F) should be escaped as \uXXXX */
+            if ((unsigned char)in[i] < 0x20) {
+                if (j + 6 < out_size) {
+                    snprintf(&out[j], out_size - j, "\\u%04x", (unsigned char)in[i]);
+                    j += 6;
+                }
+            } else {
+                out[j++] = in[i];
+            }
+            break;
+        }
+        i++;
+    }
+    out[j] = '\0';
+    return j;
+}
+
+/*
  * Connect to Unix socket (lazy connection)
  */
 static int event_connect_socket(DSMIL_EVENT_CTX *ctx)
@@ -81,6 +142,7 @@ static int event_connect_socket(DSMIL_EVENT_CTX *ctx)
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, ctx->socket_path, sizeof(addr.sun_path) - 1);
+    addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';  /* Ensure null termination */
 
     /* Connect (for DGRAM, this just sets default destination) */
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -198,31 +260,55 @@ char *dsmil_event_create_json(DSMIL_EVENT_TYPE type,
     char timestamp[32];
     char *json;
     size_t json_size;
+    char escaped_details[1024];
+    size_t escaped_len = 0;
 
     get_iso_timestamp(timestamp, sizeof(timestamp));
 
-    /* Estimate size */
-    json_size = 512 + (details ? strlen(details) : 0);
+    /* Escape details if provided */
+    if (details != NULL) {
+        escaped_len = json_escape_string(escaped_details, sizeof(escaped_details), details);
+        if (escaped_len == 0 && strlen(details) > 0) {
+            /* Escaping failed or truncated, use empty string */
+            escaped_details[0] = '\0';
+        }
+    }
+
+    /* Estimate size: base JSON + escaped details (may be up to 6x original) */
+    json_size = 512 + (details ? (strlen(details) * 6 + 64) : 0);
     json = OPENSSL_malloc(json_size);
     if (json == NULL)
         return NULL;
 
-    snprintf(json, json_size,
-             "{"
-             "\"version\":\"1.0\","
-             "\"timestamp\":\"%s\","
-             "\"event_type\":\"%s\","
-             "\"profile\":\"%s\","
-             "\"protocol\":\"%s\""
-             "%s%s%s"
-             "}",
-             timestamp,
-             event_type_names[type],
-             profile_names[profile],
-             protocol ? protocol : "unknown",
-             details ? "," : "",
-             details ? details : "",
-             details ? "" : "");
+    if (details != NULL && escaped_len > 0) {
+        snprintf(json, json_size,
+                 "{"
+                 "\"version\":\"1.0\","
+                 "\"timestamp\":\"%s\","
+                 "\"event_type\":\"%s\","
+                 "\"profile\":\"%s\","
+                 "\"protocol\":\"%s\","
+                 "\"details\":\"%s\""
+                 "}",
+                 timestamp,
+                 event_type_names[type],
+                 profile_names[profile],
+                 protocol ? protocol : "unknown",
+                 escaped_details);
+    } else {
+        snprintf(json, json_size,
+                 "{"
+                 "\"version\":\"1.0\","
+                 "\"timestamp\":\"%s\","
+                 "\"event_type\":\"%s\","
+                 "\"profile\":\"%s\","
+                 "\"protocol\":\"%s\""
+                 "}",
+                 timestamp,
+                 event_type_names[type],
+                 profile_names[profile],
+                 protocol ? protocol : "unknown");
+    }
 
     return json;
 }
