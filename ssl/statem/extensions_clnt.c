@@ -2250,9 +2250,23 @@ int tls_parse_stoc_key_share(SSL_CONNECTION *s, PACKET *pkt,
             hybrid_ctx->pqc_secret_len = s->s3.tmp.pmslen;
         }
 
+        /* Get group names from TLS group info */
+        const TLS_GROUP_INFO *ginf_classical = NULL, *ginf_pqc = NULL;
+        const char *classical_name = "X25519";  /* Default fallback */
+        const char *pqc_name = "ML-KEM-768";    /* Default fallback */
+        
+        SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(s);
+        if (sctx != NULL) {
+            ginf_classical = tls1_group_id_lookup(sctx, classical_group_id);
+            ginf_pqc = tls1_group_id_lookup(sctx, pqc_group_id);
+            
+            if (ginf_classical != NULL && ginf_classical->tlsname != NULL)
+                classical_name = ginf_classical->tlsname;
+            if (ginf_pqc != NULL && ginf_pqc->tlsname != NULL)
+                pqc_name = ginf_pqc->tlsname;
+        }
+        
         /* Combine secrets via HKDF */
-        const char *classical_name = "X25519";  /* TODO: Get from group info */
-        const char *pqc_name = "ML-KEM-768";    /* TODO: Get from group info */
         uint8_t combined_secret[64];
         size_t combined_secret_len = sizeof(combined_secret);
 
@@ -2276,8 +2290,11 @@ int tls_parse_stoc_key_share(SSL_CONNECTION *s, PACKET *pkt,
         OPENSSL_cleanse(combined_secret, sizeof(combined_secret));
         tls13_hybrid_kem_ctx_free(hybrid_ctx);
 
-        /* Handshake secret generation will happen automatically in the state machine
-         * when it processes the PMS we just set */
+        /* Generate handshake secret from combined PMS */
+        if (ssl_gensecret(s, s->s3.tmp.pms, s->s3.tmp.pmslen) == 0) {
+            /* SSLfatal() already called */
+            return 0;
+        }
     } else if (!ginf->is_kem) {
         /* Regular KEX */
         skey = EVP_PKEY_new();

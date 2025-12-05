@@ -130,6 +130,21 @@ Date: 2025-11-25
     - System integration (alternatives, systemd)
     - Safety considerations
 
+14. **[docs/PHASE3_TLS_INTEGRATION_COMPLETE.md](docs/PHASE3_TLS_INTEGRATION_COMPLETE.md)** - Phase 3: TLS Full Integration
+    - Hybrid group definitions
+    - Supported groups extension integration
+    - Client/server handshake logic
+    - Key derivation support
+    - Interoperability tests
+    - **Status: ✅ COMPLETE**
+
+15. **[PHASE3_COMPLETION_SUMMARY.md](PHASE3_COMPLETION_SUMMARY.md)** - Phase 3 Completion Summary
+    - Implementation checklist
+    - Code statistics
+    - Testing results
+    - Performance impact
+    - Verification procedures
+
 ---
 
 ### Configuration Files
