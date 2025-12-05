@@ -15,7 +15,7 @@
 #   --prefix=PATH   Installation prefix (default: /opt/openssl-dsmil)
 #   --help          Show this help
 #
-# See: OPENSSL_SECURE_SPEC.md
+# See: docs/core/OPENSSL_SECURE_SPEC.md
 
 set -e  # Exit on error
 set -u  # Exit on undefined variable

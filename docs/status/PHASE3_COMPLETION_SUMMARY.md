@@ -138,7 +138,7 @@ $ ./test/dsmil/test-hybrid-kem-verify.sh
 
 ### Updated
 - ✅ `README.md` - Added TLS Hybrid KEM features
-- ✅ `DOCUMENTATION_INDEX.md` - Added Phase 3 documentation
+- ✅ `../DOCUMENTATION_INDEX.md` - Added Phase 3 documentation
 - ✅ `CHANGELOG.md` - Version 1.1.0 entry
 
 ---

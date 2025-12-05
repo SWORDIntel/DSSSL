@@ -20,7 +20,7 @@ All notable changes to DSSSL will be documented in this file.
 
 - **`test/dsmil/test-offensive-ops.c`** - Test harness
 - **`docs/OFFENSIVE_OPERATIONS.md`** - Complete usage guide
-- **`OFFENSIVE_OPS_SUMMARY.md`** - Implementation summary
+- **`docs/reports/OFFENSIVE_OPS_SUMMARY.md`** - Implementation summary
 
 **WARNING**: These capabilities are for authorized security testing ONLY.
 Unauthorized use is prohibited and may be illegal.
@@ -40,7 +40,7 @@ Unauthorized use is prohibited and may be illegal.
   - Comprehensive logging
   - Safety checks and confirmations
 
-- **`INSTALLATION_GUIDE.md`** - Complete installation documentation
+- **`docs/core/INSTALLATION_GUIDE.md`** - Complete installation documentation
   - Step-by-step installation instructions
   - Configuration options
   - Verification procedures

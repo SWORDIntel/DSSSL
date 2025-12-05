@@ -6,7 +6,7 @@
  * This test suite measures timing variations in constant-time cryptographic
  * operations to verify they execute in constant time regardless of input values.
  *
- * See: DSSSL_SECURITY_AUDIT_REPORT.md Section 7.6
+ * See: docs/reports/DSSSL_SECURITY_AUDIT_REPORT.md Section 7.6
  *      CSNA_SIDE_CHANNEL_HARDENING.md
  */
 

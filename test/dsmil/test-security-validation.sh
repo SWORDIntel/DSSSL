@@ -335,8 +335,8 @@ if [ -f "$REPO_ROOT/docs/TPM_INTEGRATION.md" ]; then
     fi
 fi
 
-if [ -f "$REPO_ROOT/OPENSSL_SECURE_SPEC.md" ]; then
-    if grep -qi "threat\|security.*profile" "$REPO_ROOT/OPENSSL_SECURE_SPEC.md" 2>/dev/null; then
+if [ -f "$REPO_ROOT/docs/core/OPENSSL_SECURE_SPEC.md" ]; then
+    if grep -qi "threat\|security.*profile" "$REPO_ROOT/docs/core/OPENSSL_SECURE_SPEC.md" 2>/dev/null; then
         ((DOC_COUNT++))
     fi
 fi

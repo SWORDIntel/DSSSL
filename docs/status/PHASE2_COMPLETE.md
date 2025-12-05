@@ -65,7 +65,7 @@ make
 - `ssl/tls13_hybrid_kem.h` - Header with API definitions
 - `ssl/tls13_hybrid_kem.c` - Implementation skeleton
 
-**Status**: Structure complete, full TLS handshake integration pending (see TLS_INTEGRATION_GUIDE.md)
+**Status**: Structure complete, full TLS handshake integration pending (see ../core/TLS_INTEGRATION_GUIDE.md)
 
 ---
 
@@ -92,7 +92,7 @@ make
 - `ssl/statem/statem_srvr.c` - Server hybrid KEX
 - `ssl/tls13_enc.c` - Key derivation with hybrid secrets
 
-**See**: `TLS_INTEGRATION_GUIDE.md` for detailed implementation plan
+**See**: `../core/TLS_INTEGRATION_GUIDE.md` for detailed implementation plan
 
 ---
 

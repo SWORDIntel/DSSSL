@@ -133,9 +133,9 @@ See **[docs/TESTING.md](docs/TESTING.md)** for:
 
 ## Quick Links
 
-- [OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md) - Security specification
-- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - Implementation roadmap
-- [DSMIL_README.md](DSMIL_README.md) - User guide
+- [../core/OPENSSL_SECURE_SPEC.md](../core/OPENSSL_SECURE_SPEC.md) - Security specification
+- [../core/IMPLEMENTATION_PLAN.md](../core/IMPLEMENTATION_PLAN.md) - Implementation roadmap
+- [DSMIL_README_ARCHIVE.md](../DSMIL_README_ARCHIVE.md) - User guide
 - [docs/TESTING.md](docs/TESTING.md) - Comprehensive testing guide
 
 ---

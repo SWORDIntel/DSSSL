@@ -105,14 +105,14 @@ All critical security vulnerabilities and high-priority improvements from the co
 
 ## 📝 Documentation Created
 
-1. `DSSSL_SECURITY_AUDIT_REPORT.md` - Full audit report (~500 lines)
-2. `AUDIT_SUMMARY.md` - Quick reference
-3. `REMEDIATION_PLAN.md` - Action plan
-4. `IMPROVEMENTS_IMPLEMENTED.md` - Implementation details
+1. `../reports/DSSSL_SECURITY_AUDIT_REPORT.md` - Full audit report (~500 lines)
+2. `../reports/AUDIT_SUMMARY.md` - Quick reference
+3. `../reports/REMEDIATION_PLAN.md` - Action plan
+4. `../reports/IMPROVEMENTS_IMPLEMENTED.md` - Implementation details
 5. `INTEGRATION_COMPLETE.md` - Integration status
 6. `PHASE2_COMPLETE.md` - Phase 2 summary
 7. `PHASE3_TLS_INTEGRATION_STATUS.md` - TLS integration status
-8. `TLS_INTEGRATION_GUIDE.md` - TLS implementation guide
+8. `../core/TLS_INTEGRATION_GUIDE.md` - TLS implementation guide
 9. `ALL_IMPROVEMENTS_SUMMARY.md` - Complete summary
 10. `COMPLETE_INTEGRATION_SUMMARY.md` - This document
 
@@ -148,7 +148,7 @@ All critical security vulnerabilities and high-priority improvements from the co
    ```
 
 2. **Complete TLS Integration**
-   - Follow `TLS_INTEGRATION_GUIDE.md`
+   - Follow `../core/TLS_INTEGRATION_GUIDE.md`
    - Implement handshake logic
    - Add interop tests
 

@@ -22,7 +22,7 @@ Phase 9 completes the DSMIL-grade OpenSSL implementation with comprehensive docu
 - Three reading paths: Minimal (30 min), Standard (2 hours), Complete (1 day)
 - Statistics: 16 files, ~210 pages, ~8,500 lines
 
-**Project README (README-DSMIL.md)**
+**Project README (README.md)**
 - Project overview with badges (build, security score, test coverage, docs)
 - Quick start guide (clone, build, test in 5 commands)
 - Security profiles comparison table
@@ -57,9 +57,10 @@ dsssl-world-1.0.0-amd64.deb
 │   │   ├── libssl.so.3
 │   │   └── libcrypto.so.3
 │   └── share/doc/dsssl-world/
-│       ├── OPENSSL_SECURE_SPEC.md
-│       ├── DSMIL_README.md
-│       ├── README-DSMIL.md
+│       ├── core/OPENSSL_SECURE_SPEC.md
+│       ├── DSMIL_README_ARCHIVE.md
+│       ├── DOCUMENTATION_INDEX.md
+│       ├── README.md
 │       ├── DEPLOYMENT_GUIDE.md
 │       ├── changelog
 │       └── copyright
@@ -250,16 +251,17 @@ docker run -v /etc/dsssl:/etc/dsssl dsssl:world openssl s_server -config /etc/ds
 ```
 DSSSL/
 ├── docs/
-│   ├── DEPLOYMENT_GUIDE.md         # NEW: Complete deployment guide (~400 lines)
-│   └── PHASE9_DEPLOYMENT_SUMMARY.md # NEW: This document
+│   ├── DOCUMENTATION_INDEX.md       # NEW: Master documentation index
+│   ├── DSMIL_README_ARCHIVE.md      # UPDATED: Archived comprehensive README
+│   ├── DEPLOYMENT_GUIDE.md          # UPDATED: Complete deployment guide (~400 lines)
+│   ├── PHASE9_DEPLOYMENT_SUMMARY.md # NEW: This document
+│   └── core/IMPLEMENTATION_PLAN.md  # UPDATED: Mark Phase 9 complete
 ├── util/
-│   ├── build-package.sh            # NEW: Debian package builder (~300 lines)
-│   ├── verify-installation.sh      # NEW: Installation verification (~250 lines)
-│   └── dsssl-telemetry.service     # NEW: Systemd service file
-├── Dockerfile                       # NEW: Container deployment
-├── DOCUMENTATION_INDEX.md           # NEW: Master documentation index
-├── README-DSMIL.md                  # NEW: Project README
-└── IMPLEMENTATION_PLAN.md           # UPDATED: Mark Phase 9 complete
+│   ├── build-package.sh             # NEW: Debian package builder (~300 lines)
+│   ├── verify-installation.sh       # NEW: Installation verification (~250 lines)
+│   └── dsssl-telemetry.service      # NEW: Systemd service file
+├── Dockerfile                        # NEW: Container deployment
+└── README.md                         # NEW: Project README
 ```
 
 ---
@@ -389,13 +391,14 @@ docker run --rm dsssl:test
 ### Test 5: Documentation Completeness
 ```bash
 # Check all documentation exists
-ls -1 DOCUMENTATION_INDEX.md \
-      README-DSMIL.md \
+ls -1 docs/DOCUMENTATION_INDEX.md \
+      README.md \
+      docs/DSMIL_README_ARCHIVE.md \
       docs/DEPLOYMENT_GUIDE.md \
       docs/PHASE9_DEPLOYMENT_SUMMARY.md
 
 # Count total documentation
-grep "Total.*16" DOCUMENTATION_INDEX.md
+grep "Total.*16" docs/DOCUMENTATION_INDEX.md
 # Expected: 16 files, ~210 pages, ~8,500 lines
 ```
 
@@ -617,10 +620,10 @@ cd test/dsmil
 ## References
 
 - [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Complete deployment guide
-- [DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md) - Master documentation index
-- [README-DSMIL.md](../README-DSMIL.md) - Project overview
-- [OPENSSL_SECURE_SPEC.md](../OPENSSL_SECURE_SPEC.md) - Security specification
-- [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) - Implementation roadmap
+- [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) - Master documentation index
+- [README.md](../README.md) - Project overview
+- [core/OPENSSL_SECURE_SPEC.md](../core/OPENSSL_SECURE_SPEC.md) - Security specification
+- [IMPLEMENTATION_PLAN.md](../core/IMPLEMENTATION_PLAN.md) - Implementation roadmap
 
 ---
 

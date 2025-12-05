@@ -92,7 +92,7 @@ All critical security vulnerabilities and high-priority improvements from the co
 4. `IMPROVEMENTS_IMPLEMENTED.md` - Implementation details
 5. `INTEGRATION_COMPLETE.md` - Integration status
 6. `PHASE2_COMPLETE.md` - Phase 2 summary
-7. `TLS_INTEGRATION_GUIDE.md` - TLS implementation guide
+7. `../core/TLS_INTEGRATION_GUIDE.md` - TLS implementation guide
 8. `ALL_IMPROVEMENTS_SUMMARY.md` - This document
 
 ---
@@ -111,7 +111,7 @@ All critical security vulnerabilities and high-priority improvements from the co
 - Add key derivation support
 - Add interop tests
 
-**See**: `TLS_INTEGRATION_GUIDE.md` for detailed steps
+**See**: `../core/TLS_INTEGRATION_GUIDE.md` for detailed steps
 
 ---
 
@@ -130,7 +130,7 @@ All critical security vulnerabilities and high-priority improvements from the co
    - Enable `-Werror` after warnings fixed
 
 3. **Complete TLS Integration**
-   - Follow `TLS_INTEGRATION_GUIDE.md`
+   - Follow `../core/TLS_INTEGRATION_GUIDE.md`
    - Implement hybrid KEM in TLS handshake
    - Add interop tests
 

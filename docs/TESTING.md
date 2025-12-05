@@ -578,8 +578,8 @@ exit $TESTS_FAILED
 ## References
 
 - [OpenSSL Testing](https://github.com/openssl/openssl/blob/master/test/README.md)
-- [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md)
-- [OPENSSL_SECURE_SPEC.md](../OPENSSL_SECURE_SPEC.md)
+- [IMPLEMENTATION_PLAN.md](../core/IMPLEMENTATION_PLAN.md)
+- [OPENSSL_SECURE_SPEC.md](../core/OPENSSL_SECURE_SPEC.md)
 
 ---
 

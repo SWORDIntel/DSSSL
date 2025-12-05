@@ -90,7 +90,7 @@ DSSSL (DSMIL-Grade OpenSSL) is now complete with all planned features plus signi
 
 ### Documentation
 - `README.md` - Updated with all features
-- `DOCUMENTATION_INDEX.md` - Comprehensive index
+- `../DOCUMENTATION_INDEX.md` - Comprehensive index
 - `CHANGELOG.md` - Version history
 - `IMPLEMENTATION_COMPLETE.md` - This document
 
@@ -148,14 +148,14 @@ SSL_CVE_detection_enable(ssl, ctx);
 
 ### Essential Reading
 1. **[README.md](README.md)** - Overview and quick start
-2. **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - Complete documentation guide
-3. **[OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md)** - Full specification
+2. **[../DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md)** - Complete documentation guide
+3. **[../core/OPENSSL_SECURE_SPEC.md](../core/OPENSSL_SECURE_SPEC.md)** - Full specification
 4. **[test/dsmil/HYBRID_KEM_TEST_SUMMARY.md](test/dsmil/HYBRID_KEM_TEST_SUMMARY.md)** - Hybrid KEM testing
 5. **[docs/CVE_DETECTION_AND_MITIGATION.md](docs/CVE_DETECTION_AND_MITIGATION.md)** - CVE detection guide
 
 ### Quick References
 - [CHANGELOG.md](CHANGELOG.md) - Version history
-- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - Original roadmap
+- [../core/IMPLEMENTATION_PLAN.md](../core/IMPLEMENTATION_PLAN.md) - Original roadmap
 - [docs/TESTING.md](docs/TESTING.md) - Testing procedures
 
 ## 🔒 Security Features
@@ -182,8 +182,8 @@ SSL_CVE_detection_enable(ssl, ctx);
 4. Review [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for production deployment
 
 ### For Developers
-1. Review [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for complete guide
-2. Check [OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md) for API details
+1. Review [../DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md) for complete guide
+2. Check [../core/OPENSSL_SECURE_SPEC.md](../core/OPENSSL_SECURE_SPEC.md) for API details
 3. Review test suites for usage examples
 4. Contribute improvements via internal review process
 
@@ -195,7 +195,7 @@ SSL_CVE_detection_enable(ssl, ctx);
 
 ## 📞 Support
 
-- **Documentation**: See [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
+- **Documentation**: See [../DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md)
 - **Testing**: See [docs/TESTING.md](docs/TESTING.md)
 - **Issues**: Use internal issue tracking system
 - **Security**: Contact security team via secure channels

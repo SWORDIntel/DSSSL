@@ -12,7 +12,7 @@
  * - ssl/tls13_enc.c (key derivation)
  *
  * STATUS: Structure defined, full integration pending
- * See: DSSSL_SECURITY_AUDIT_REPORT.md Section 7.1
+ * See: docs/reports/DSSSL_SECURITY_AUDIT_REPORT.md Section 7.1
  */
 
 #include <openssl/ssl.h>

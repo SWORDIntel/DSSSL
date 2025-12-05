@@ -55,9 +55,9 @@ sudo ./install-dsssl.sh
 ## 📚 Essential Documentation
 
 **Start Here:**
-1. **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - Complete documentation guide
-2. **[OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md)** - Full DSMIL specification
-3. **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** - 9-phase implementation roadmap
+1. **[docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)** - Complete documentation guide
+2. **[docs/core/OPENSSL_SECURE_SPEC.md](docs/core/OPENSSL_SECURE_SPEC.md)** - Full DSMIL specification
+3. **[docs/core/IMPLEMENTATION_PLAN.md](docs/core/IMPLEMENTATION_PLAN.md)** - 9-phase implementation roadmap
 
 **Implementation Phases:**
 - ✅ Phase 1-9: Complete (Build, Policy, Events, Config, Hybrid, CSNA, TPM, Testing, Deployment)
@@ -171,9 +171,9 @@ make test
 ## 📖 Documentation
 
 ### Core Docs
-- [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) - Master index
-- [OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md) - Complete specification
-- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - 9-phase roadmap
+- [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md) - Master index
+- [docs/core/OPENSSL_SECURE_SPEC.md](docs/core/OPENSSL_SECURE_SPEC.md) - Complete specification
+- [docs/core/IMPLEMENTATION_PLAN.md](docs/core/IMPLEMENTATION_PLAN.md) - 9-phase roadmap
 
 ### Phase Guides
 - [docs/PHASES_2-5_SUMMARY.md](docs/PHASES_2-5_SUMMARY.md) - Policy, Events, Hybrid
@@ -189,7 +189,7 @@ make test
 
 ### Quick Refs
 - [README-TESTING.md](README-TESTING.md) - Quick testing reference
-- [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - **System installation guide**
+- [docs/core/INSTALLATION_GUIDE.md](docs/core/INSTALLATION_GUIDE.md) - **System installation guide**
 - [examples/README.md](examples/README.md) - Example programs
 - [docs/openssl-original/](docs/openssl-original/) - Original OpenSSL docs
 
@@ -358,7 +358,7 @@ External contributions not currently accepted.
 
 ## 📞 Support
 
-- **Documentation**: [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
+- **Documentation**: [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)
 - **Testing**: [docs/TESTING.md](docs/TESTING.md)
 - **DSLLVM Issues**: https://github.com/SWORDIntel/DSLLVM/issues
 - **Internal**: Use DoD secure channels

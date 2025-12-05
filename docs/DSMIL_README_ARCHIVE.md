@@ -69,8 +69,8 @@ sudo cp configs/dsmil-secure.cnf /opt/openssl-dsmil/ssl/openssl.cnf
 
 ## Documentation
 
-- **[OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md)**: Complete security specification
-- **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)**: Phased implementation roadmap
+- **[core/OPENSSL_SECURE_SPEC.md](core/OPENSSL_SECURE_SPEC.md)**: Complete security specification
+- **[core/IMPLEMENTATION_PLAN.md](core/IMPLEMENTATION_PLAN.md)**: Phased implementation roadmap
 - **[Configurations/10-dsllvm.conf](Configurations/10-dsllvm.conf)**: DSLLVM build targets
 
 ## Architecture
@@ -128,9 +128,9 @@ Configuration: `configs/atomal.cnf`
 
 ```
 DSSSL/
-├── OPENSSL_SECURE_SPEC.md          # Security specification
-├── IMPLEMENTATION_PLAN.md           # Implementation roadmap
-├── DSMIL_README.md                  # This file
+├── core/OPENSSL_SECURE_SPEC.md          # Security specification
+├── core/IMPLEMENTATION_PLAN.md           # Implementation roadmap
+├── DSMIL_README_ARCHIVE.md          # This file
 ├── Configurations/
 │   └── 10-dsllvm.conf              # DSLLVM build configurations
 ├── configs/
@@ -179,7 +179,7 @@ DSSSL/
 - [ ] CBOR/JSON event formatting
 - [ ] DEFRAMEWORK integration
 
-### 📋 Phase 4-9: See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
+### 📋 Phase 4-9: See [core/IMPLEMENTATION_PLAN.md](core/IMPLEMENTATION_PLAN.md)
 
 ## Development
 
@@ -225,7 +225,7 @@ OPENSSL_DEBUG=1 ./apps/openssl ...
 
 ### Threat Model
 
-See [OPENSSL_SECURE_SPEC.md Section 2](OPENSSL_SECURE_SPEC.md#2-threat-model--goals)
+See [core/OPENSSL_SECURE_SPEC.md Section 2](core/OPENSSL_SECURE_SPEC.md#2-threat-model--goals)
 
 - Passive/active network adversaries
 - Protocol downgrade attacks
