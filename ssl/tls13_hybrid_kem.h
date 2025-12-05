@@ -15,6 +15,7 @@
 
 # include <openssl/ssl.h>
 # include <openssl/evp.h>
+# include "crypto/ml_kem/ml_kem.h"
 
 /*
  * Hybrid Named Groups for TLS 1.3
