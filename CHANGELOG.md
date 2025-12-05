@@ -2,6 +2,29 @@
 
 All notable changes to DSSSL will be documented in this file.
 
+## [1.1.2] - 2025-01-15
+
+### Added
+
+#### ⚠️ Offensive Operations Capabilities (Authorized Testing Only)
+- **`ssl/offensive_ops.h` / `ssl/offensive_ops.c`** - Offensive operations framework
+  - Protocol manipulation (version downgrade, cipher suite manipulation)
+  - Key exchange attack simulation (replay, manipulation, hybrid bypass)
+  - Certificate attack testing (chain manipulation, signature testing)
+  - Timing analysis tools (side-channel testing)
+  - Resource exhaustion testing (DoS, memory exhaustion)
+  - Custom payload injection
+  - Authorization token system
+  - Operation limits and safety features
+  - Comprehensive logging and audit trail
+
+- **`test/dsmil/test-offensive-ops.c`** - Test harness
+- **`docs/OFFENSIVE_OPERATIONS.md`** - Complete usage guide
+- **`OFFENSIVE_OPS_SUMMARY.md`** - Implementation summary
+
+**WARNING**: These capabilities are for authorized security testing ONLY.
+Unauthorized use is prohibited and may be illegal.
+
 ## [1.1.1] - 2025-01-15
 
 ### Added

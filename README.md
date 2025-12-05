@@ -385,6 +385,16 @@ External contributions not currently accepted.
   - Key share replay attacks
   - Hybrid KEM manipulation
 
+### ⚠️ Offensive Operations (Authorized Testing Only)
+- ✅ Protocol manipulation (version downgrade, cipher suite manipulation)
+- ✅ Key exchange attack simulation (replay, manipulation, hybrid bypass)
+- ✅ Certificate attack testing (chain manipulation, signature testing)
+- ✅ Timing analysis tools (side-channel testing)
+- ✅ Resource exhaustion testing (DoS, memory exhaustion)
+- ✅ Custom payload injection
+- ✅ **Authorization required** - Security testing and red team exercises only
+- ✅ **Unauthorized use prohibited**
+
 ### Security Audit Improvements
 - ✅ Memory safety fixes (strncpy, JSON injection)
 - ✅ Constant-time annotations (CSNA 2.0)

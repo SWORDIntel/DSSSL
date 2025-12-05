@@ -145,6 +145,16 @@ Date: 2025-11-25
     - Performance impact
     - Verification procedures
 
+16. **[docs/OFFENSIVE_OPERATIONS.md](docs/OFFENSIVE_OPERATIONS.md)** - ⚠️ Offensive Operations Guide
+    - **WARNING**: Authorized security testing only
+    - Protocol manipulation capabilities
+    - Key exchange attack simulation
+    - Certificate attack testing
+    - Timing analysis tools
+    - Resource exhaustion testing
+    - Authorization and safety features
+    - **Unauthorized use prohibited**
+
 ---
 
 ### Configuration Files
