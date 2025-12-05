@@ -2,6 +2,34 @@
 
 All notable changes to DSSSL will be documented in this file.
 
+## [1.1.1] - 2025-01-15
+
+### Added
+
+#### System Installer
+- **`install-dsssl.sh`** - Comprehensive system installer
+  - Automatic detection of system OpenSSL
+  - Backup creation before installation
+  - Build verification and automatic building
+  - Library and binary installation
+  - Installation verification
+  - Rollback script generation
+  - Comprehensive logging
+  - Safety checks and confirmations
+
+- **`INSTALLATION_GUIDE.md`** - Complete installation documentation
+  - Step-by-step installation instructions
+  - Configuration options
+  - Verification procedures
+  - Rollback procedures
+  - Troubleshooting guide
+  - System integration (alternatives, systemd)
+  - Safety considerations
+
+### Changed
+- Updated README with installation instructions
+- Updated documentation index with installation guide
+
 ## [1.1.0] - 2025-01-15
 
 ### Added

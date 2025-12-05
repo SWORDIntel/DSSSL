@@ -45,6 +45,9 @@ cd test/dsmil && ./run-all-tests.sh
 
 # Check PQC support
 cd examples && make && ./check-pqc
+
+# Install as system OpenSSL (requires root)
+sudo ./install-dsssl.sh
 ```
 
 ---
@@ -185,6 +188,7 @@ make test
 
 ### Quick Refs
 - [README-TESTING.md](README-TESTING.md) - Quick testing reference
+- [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - **System installation guide**
 - [examples/README.md](examples/README.md) - Example programs
 - [docs/openssl-original/](docs/openssl-original/) - Original OpenSSL docs
 

@@ -123,6 +123,13 @@ Date: 2025-11-25
     - Security event logging
     - Testing and validation
 
+13. **[INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)** - System Installation Guide
+    - Installing DSSSL as system OpenSSL replacement
+    - Backup and rollback procedures
+    - Verification and troubleshooting
+    - System integration (alternatives, systemd)
+    - Safety considerations
+
 ---
 
 ### Configuration Files
@@ -178,6 +185,9 @@ Date: 2025-11-25
 
 **Deploy to production**
 → [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) + [PHASE9_DEPLOYMENT_SUMMARY.md](docs/PHASE9_DEPLOYMENT_SUMMARY.md)
+
+**Install as system OpenSSL**
+→ [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 
 **Troubleshoot issues**
 → [TESTING.md](docs/TESTING.md#troubleshooting) + Profile-specific guides
