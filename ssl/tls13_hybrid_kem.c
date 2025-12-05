@@ -116,7 +116,7 @@ int tls13_hybrid_kem_combine_secrets(TLS13_HYBRID_KEM_CTX *ctx,
     *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, ikm, ikm_len);
     *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_INFO, info, strlen(info));
     *p++ = OSSL_PARAM_construct_size_t(OSSL_KDF_PARAM_SIZE, combined_secret_len);
-    *p = OSSL_PARAM_END;
+    *p = (OSSL_PARAM)OSSL_PARAM_END;
 
     if (EVP_KDF_derive(kdf_ctx, combined_secret, *combined_secret_len, params) <= 0)
         goto err;
@@ -134,9 +134,6 @@ err:
  */
 int tls13_hybrid_kem_required(SSL *s)
 {
-    OSSL_LIB_CTX *libctx;
-    DSMIL_POLICY_CTX *policy_ctx;
-    DSMIL_PROFILE profile;
     int required = 0;
 
     if (s == NULL)
@@ -144,10 +141,6 @@ int tls13_hybrid_kem_required(SSL *s)
 
     /* Get policy context from SSL */
     /* TODO: Store policy context in SSL structure */
-    libctx = SSL_get0_libctx(s);
-    if (libctx == NULL)
-        return 0;
-
     /* For now, check environment variable */
     /* TODO: Get from SSL configuration */
     {
