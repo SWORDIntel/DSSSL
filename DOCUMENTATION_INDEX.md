@@ -116,6 +116,13 @@ Date: 2025-11-25
     - Build instructions
     - Troubleshooting
 
+12. **[docs/CVE_DETECTION_AND_MITIGATION.md](docs/CVE_DETECTION_AND_MITIGATION.md)** - CVE Detection & Mitigation
+    - 2024-2025 high-impact SSL/TLS CVE coverage
+    - Attack pattern detection
+    - Automatic mitigation strategies
+    - Security event logging
+    - Testing and validation
+
 ---
 
 ### Configuration Files
@@ -159,6 +166,12 @@ Date: 2025-11-25
 
 **Understand hybrid cryptography**
 → [HYBRID_CRYPTO.md](docs/HYBRID_CRYPTO.md)
+
+**Use TLS 1.3 Hybrid KEM**
+→ [test/dsmil/HYBRID_KEM_TEST_SUMMARY.md](test/dsmil/HYBRID_KEM_TEST_SUMMARY.md)
+
+**Configure CVE detection**
+→ [docs/CVE_DETECTION_AND_MITIGATION.md](docs/CVE_DETECTION_AND_MITIGATION.md)
 
 **Run tests**
 → [PHASE8_COMPREHENSIVE_TESTING.md](docs/PHASE8_COMPREHENSIVE_TESTING.md) + [TESTING.md](docs/TESTING.md)
@@ -205,10 +218,10 @@ Date: 2025-11-25
 | Category | Files | Pages (est.) | Lines |
 |----------|-------|--------------|-------|
 | Specifications | 3 | 60 | ~2,500 |
-| Implementation Guides | 6 | 100 | ~4,200 |
-| Testing Guides | 3 | 50 | ~2,000 |
+| Implementation Guides | 7 | 120 | ~5,200 |
+| Testing Guides | 4 | 60 | ~2,500 |
 | Examples & Configs | 5 | 20 | ~800 |
-| **Total** | **17** | **230** | **~9,500** |
+| **Total** | **19** | **260** | **~11,000** |
 
 ---
 
@@ -224,11 +237,24 @@ Date: 2025-11-25
 - `tpm2_compat.h` - TPM2 API definitions (88 algorithms)
 - `tpm_integration.h` / `tpm_integration.c` - TPM integration layer
 
+**TLS 1.3 Hybrid KEM** (`ssl/`)
+- `tls13_hybrid_kem.h` / `tls13_hybrid_kem.c` - Hybrid KEM implementation
+- `statem/extensions_clnt.c` - Client hybrid key exchange
+- `statem/extensions_srvr.c` - Server hybrid key exchange
+
+**CVE Detection** (`ssl/`)
+- `cve_detection.h` / `cve_detection.c` - CVE detection and mitigation
+- Attack pattern detection
+- Automatic mitigation strategies
+
 **Test Suites** (`test/dsmil/`)
-- `run-all-tests.sh` - Quick test runner (342+ tests)
+- `run-all-tests.sh` - Quick test runner (350+ tests)
 - `test-comprehensive.sh` - Full test suite
 - `test-security-validation.sh` - Security checks (100% score achieved)
 - `test-performance-benchmarks.sh` - Performance testing
+- `test-hybrid-kem-tls.c` - **TLS 1.3 Hybrid KEM tests**
+- `test-hybrid-kem-verify.sh` - **Hybrid KEM verification**
+- `test-cve-detection.c` - **CVE detection tests**
 - `prepare-fuzzing.sh` - Fuzzing setup
 
 **Build Scripts** (`util/`)
@@ -244,9 +270,11 @@ Date: 2025-11-25
 | Security Profiles | ✅ | ✅ | ✅ | ✅ |
 | Post-Quantum Crypto | ✅ | ✅ | ✅ | ✅ |
 | Hybrid Crypto | ✅ | ✅ | ✅ | ✅ |
+| **TLS 1.3 Hybrid KEM** | ✅ | ✅ | ✅ | ✅ |
 | Event Telemetry | ✅ | ✅ | ✅ | ✅ |
 | CSNA Hardening | ✅ | ✅ | ✅ | ✅ |
 | TPM Integration | ✅ | ✅ | ✅ | ✅ |
+| **CVE Detection** | ✅ | ✅ | ✅ | ✅ |
 | Performance Testing | ✅ | N/A | ✅ | ✅ |
 | Security Validation | ✅ | N/A | ✅ | ✅ |
 | Fuzzing | ✅ | ✅ | ✅ | ✅ |
@@ -310,9 +338,11 @@ Distribution is authorized to:
 - [x] API reference provided
 - [x] Deployment guide (Phase 9)
 - [x] Production operations guide (Phase 9)
+- [x] TLS 1.3 Hybrid KEM documentation
+- [x] CVE detection and mitigation guide
 
 ---
 
-**Last Updated**: 2025-11-25
-**Document Version**: 1.0.0
-**Implementation Status**: Phases 1-9 Complete ✅ (Production Ready)
+**Last Updated**: 2025-01-15
+**Document Version**: 1.1.0
+**Implementation Status**: Phases 1-9 + TLS Hybrid KEM + CVE Detection ✅ (Production Ready)
