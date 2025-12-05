@@ -12981,6 +12981,7 @@ our %unified_info = (
                 "ssl/libssl-lib-d1_msg.o",
                 "ssl/libssl-lib-d1_srtp.o",
                 "ssl/libssl-lib-methods.o",
+                "ssl/libssl-lib-offensive_ops.o",
                 "ssl/libssl-lib-pqueue.o",
                 "ssl/libssl-lib-priority_queue.o",
                 "ssl/libssl-lib-s3_enc.o",
@@ -13013,6 +13014,7 @@ our %unified_info = (
                 "ssl/libssl-shlib-d1_msg.o",
                 "ssl/libssl-shlib-d1_srtp.o",
                 "ssl/libssl-shlib-methods.o",
+                "ssl/libssl-shlib-offensive_ops.o",
                 "ssl/libssl-shlib-pqueue.o",
                 "ssl/libssl-shlib-priority_queue.o",
                 "ssl/libssl-shlib-s3_enc.o",
@@ -27641,6 +27643,7 @@ our %unified_info = (
             "ssl/libssl-shlib-d1_msg.o",
             "ssl/libssl-shlib-d1_srtp.o",
             "ssl/libssl-shlib-methods.o",
+            "ssl/libssl-shlib-offensive_ops.o",
             "ssl/libssl-shlib-pqueue.o",
             "ssl/libssl-shlib-priority_queue.o",
             "ssl/libssl-shlib-s3_enc.o",
@@ -34498,6 +34501,7 @@ our %unified_info = (
             "ssl/libssl-lib-d1_msg.o",
             "ssl/libssl-lib-d1_srtp.o",
             "ssl/libssl-lib-methods.o",
+            "ssl/libssl-lib-offensive_ops.o",
             "ssl/libssl-lib-pqueue.o",
             "ssl/libssl-lib-priority_queue.o",
             "ssl/libssl-lib-s3_enc.o",
@@ -35513,6 +35517,9 @@ our %unified_info = (
         "ssl/libssl-lib-methods.o" => [
             "../ssl/methods.c"
         ],
+        "ssl/libssl-lib-offensive_ops.o" => [
+            "../ssl/offensive_ops.c"
+        ],
         "ssl/libssl-lib-pqueue.o" => [
             "../ssl/pqueue.c"
         ],
@@ -35608,6 +35615,9 @@ our %unified_info = (
         ],
         "ssl/libssl-shlib-methods.o" => [
             "../ssl/methods.c"
+        ],
+        "ssl/libssl-shlib-offensive_ops.o" => [
+            "../ssl/offensive_ops.c"
         ],
         "ssl/libssl-shlib-pqueue.o" => [
             "../ssl/pqueue.c"

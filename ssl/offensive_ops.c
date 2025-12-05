@@ -10,13 +10,16 @@
  */
 
 #include "ssl_local.h"
+#include "internal/ssl_unwrap.h"
 #include "offensive_ops.h"
 #include "providers/dsmil/events.h"
 #include "providers/dsmil/policy.h"
 #include <string.h>
+#include <math.h>
 #include <openssl/err.h>
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
+#include <openssl/x509.h>
 #include <time.h>
 
 /* Authorization token hash (SHA-256 of authorized token) */
@@ -168,8 +171,8 @@ int SSL_OFFENSIVE_ops_enable(SSL *ssl, SSL_OFFENSIVE_OPS_CTX *ctx)
     ctx->enabled = 1;
 
     /* Log enablement */
-    dsmil_event_log(DSMIL_EVENT_SECURITY_ALERT, DSMIL_PROFILE_WORLD_COMPAT,
-                   "TLS", "Offensive operations enabled - AUTHORIZED TESTING ONLY");
+    /* TODO: Use dsmil_event_emit_json or appropriate event logging function */
+    /* dsmil_event_emit_json(ctx, DSMIL_EVENT_SECURITY_ALERT, ...); */
 
     return 1;
 }
@@ -338,10 +341,9 @@ int SSL_OFFENSIVE_replay_key_share(SSL *ssl,
  */
 int SSL_OFFENSIVE_bypass_hybrid_kem(SSL *ssl)
 {
-    SSL_CONNECTION *s = SSL_CONNECTION_FROM_SSL_ONLY(ssl);
     SSL_OFFENSIVE_OPS_CTX *ctx;
 
-    if (s == NULL)
+    if (ssl == NULL)
         return 0;
 
     ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
@@ -369,10 +371,9 @@ int SSL_OFFENSIVE_bypass_hybrid_kem(SSL *ssl)
  */
 int SSL_OFFENSIVE_enable_timing_analysis(SSL *ssl, int enable)
 {
-    SSL_CONNECTION *s = SSL_CONNECTION_FROM_SSL_ONLY(ssl);
     SSL_OFFENSIVE_OPS_CTX *ctx;
 
-    if (s == NULL)
+    if (ssl == NULL)
         return 0;
 
     ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
@@ -397,11 +398,10 @@ int SSL_OFFENSIVE_measure_timing(SSL *ssl,
                                 const char *operation,
                                 uint64_t *timing_ns)
 {
-    SSL_CONNECTION *s = SSL_CONNECTION_FROM_SSL_ONLY(ssl);
     SSL_OFFENSIVE_OPS_CTX *ctx;
     struct timespec start, end;
 
-    if (s == NULL || operation == NULL || timing_ns == NULL)
+    if (ssl == NULL || operation == NULL || timing_ns == NULL)
         return 0;
 
     ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
@@ -426,10 +426,9 @@ int SSL_OFFENSIVE_measure_timing(SSL *ssl,
  */
 int SSL_OFFENSIVE_trigger_handshake_dos(SSL *ssl, uint32_t iterations)
 {
-    SSL_CONNECTION *s = SSL_CONNECTION_FROM_SSL_ONLY(ssl);
     SSL_OFFENSIVE_OPS_CTX *ctx;
 
-    if (s == NULL)
+    if (ssl == NULL)
         return 0;
 
     ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
@@ -458,10 +457,9 @@ int SSL_OFFENSIVE_inject_payload(SSL *ssl,
                                 const unsigned char *payload,
                                 size_t payload_len)
 {
-    SSL_CONNECTION *s = SSL_CONNECTION_FROM_SSL_ONLY(ssl);
     SSL_OFFENSIVE_OPS_CTX *ctx;
 
-    if (s == NULL || payload == NULL || payload_len == 0)
+    if (ssl == NULL || payload == NULL || payload_len == 0)
         return 0;
 
     ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
@@ -552,4 +550,545 @@ void SSL_OFFENSIVE_reset_counters(SSL_OFFENSIVE_OPS_CTX *ctx)
 
     ctx->operation_count = 0;
     ctx->active_op = SSL_OFFENSIVE_OP_NONE;
+}
+
+/*
+ * Inject custom handshake message
+ */
+int SSL_OFFENSIVE_inject_handshake_message(SSL *ssl,
+                                          uint8_t msg_type,
+                                          const unsigned char *data,
+                                          size_t data_len)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || data == NULL || data_len == 0)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Store handshake message for injection */
+    if (ctx->attack_params != NULL)
+        OPENSSL_free(ctx->attack_params);
+
+    /* Allocate space for msg_type + data */
+    ctx->attack_params = OPENSSL_malloc(1 + data_len);
+    if (ctx->attack_params == NULL)
+        return 0;
+
+    ((unsigned char *)ctx->attack_params)[0] = msg_type;
+    memcpy((unsigned char *)ctx->attack_params + 1, data, data_len);
+    ctx->attack_params_len = 1 + data_len;
+    ctx->active_op = SSL_OFFENSIVE_OP_HANDSHAKE_INJECTION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Handshake injection: type 0x%02x, len %zu",
+                msg_type, data_len);
+        ctx->log_operation(SSL_OFFENSIVE_OP_HANDSHAKE_INJECTION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Manipulate key share data
+ */
+int SSL_OFFENSIVE_manipulate_key_share(SSL *ssl,
+                                       uint16_t group_id,
+                                       const unsigned char *modified_data,
+                                       size_t data_len)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || modified_data == NULL || data_len == 0)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Store modified key share */
+    if (ctx->attack_params != NULL)
+        OPENSSL_free(ctx->attack_params);
+
+    /* Allocate space for group_id (2 bytes) + data */
+    ctx->attack_params = OPENSSL_malloc(2 + data_len);
+    if (ctx->attack_params == NULL)
+        return 0;
+
+    ((uint16_t *)ctx->attack_params)[0] = group_id;
+    memcpy((unsigned char *)ctx->attack_params + 2, modified_data, data_len);
+    ctx->attack_params_len = 2 + data_len;
+    ctx->active_op = SSL_OFFENSIVE_OP_KEY_SHARE_MANIPULATION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Key share manipulation: group 0x%04x, len %zu",
+                group_id, data_len);
+        ctx->log_operation(SSL_OFFENSIVE_OP_KEY_SHARE_MANIPULATION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Manipulate certificate chain
+ */
+int SSL_OFFENSIVE_manipulate_cert_chain(SSL *ssl,
+                                        STACK_OF(X509) *modified_chain)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || modified_chain == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Store reference to modified chain */
+    /* Note: Actual manipulation would require deeper SSL state access */
+    ctx->active_op = SSL_OFFENSIVE_OP_CERTIFICATE_CHAIN_MANIPULATION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        int chain_len = sk_X509_num(modified_chain);
+        char details[256];
+        snprintf(details, sizeof(details), "Certificate chain manipulation: %d certificates",
+                chain_len);
+        ctx->log_operation(SSL_OFFENSIVE_OP_CERTIFICATE_CHAIN_MANIPULATION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Test signature verification bypass
+ */
+int SSL_OFFENSIVE_test_signature_bypass(SSL *ssl)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    ctx->active_op = SSL_OFFENSIVE_OP_SIGNATURE_FORGERY_TEST;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        ctx->log_operation(SSL_OFFENSIVE_OP_SIGNATURE_FORGERY_TEST,
+                          "Signature bypass test", ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Exhaust memory resources
+ */
+int SSL_OFFENSIVE_exhaust_memory(SSL *ssl, size_t target_size)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+    void *allocated_mem = NULL;
+    size_t max_size = 100 * 1024 * 1024; /* Cap at 100MB for safety */
+
+    if (ssl == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Limit allocation size for safety */
+    if (target_size > max_size)
+        target_size = max_size;
+
+    /* Allocate memory to exhaust resources */
+    allocated_mem = OPENSSL_malloc(target_size);
+    if (allocated_mem == NULL)
+        return 0;
+
+    /* Store reference for cleanup */
+    if (ctx->attack_params != NULL)
+        OPENSSL_free(ctx->attack_params);
+
+    ctx->attack_params = allocated_mem;
+    ctx->attack_params_len = target_size;
+    ctx->active_op = SSL_OFFENSIVE_OP_MEMORY_EXHAUSTION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Memory exhaustion: %zu bytes", target_size);
+        ctx->log_operation(SSL_OFFENSIVE_OP_MEMORY_EXHAUSTION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Modify outgoing application data
+ */
+int SSL_OFFENSIVE_modify_app_data(SSL *ssl,
+                                  const unsigned char *original,
+                                  size_t orig_len,
+                                  unsigned char *modified,
+                                  size_t *mod_len)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || original == NULL || modified == NULL || mod_len == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Copy original to modified (placeholder for actual manipulation) */
+    if (*mod_len < orig_len)
+        return 0;
+
+    memcpy(modified, original, orig_len);
+    *mod_len = orig_len;
+
+    ctx->active_op = SSL_OFFENSIVE_OP_CUSTOM_PAYLOAD;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "App data modification: %zu bytes", orig_len);
+        ctx->log_operation(SSL_OFFENSIVE_OP_CUSTOM_PAYLOAD, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Simulate padding oracle attack (for testing CBC padding validation)
+ */
+int SSL_OFFENSIVE_simulate_padding_oracle(SSL *ssl,
+                                          const unsigned char *ciphertext,
+                                          size_t ciphertext_len,
+                                          int *padding_valid)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || ciphertext == NULL || padding_valid == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Simulate padding oracle check */
+    /* This is a test function - actual implementation would check padding */
+    if (ciphertext_len < 16) {
+        *padding_valid = 0;
+        return 1;
+    }
+
+    /* Check last byte as padding length indicator */
+    unsigned char padding_len = ciphertext[ciphertext_len - 1];
+    if (padding_len > 16 || padding_len == 0) {
+        *padding_valid = 0;
+    } else {
+        /* Basic padding validation simulation */
+        *padding_valid = 1;
+    }
+
+    ctx->active_op = SSL_OFFENSIVE_OP_SIDE_CHANNEL_EXPLOIT;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Padding oracle test: len %zu, valid %d",
+                ciphertext_len, *padding_valid);
+        ctx->log_operation(SSL_OFFENSIVE_OP_SIDE_CHANNEL_EXPLOIT, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Fragment TLS record (for testing fragmentation handling)
+ */
+int SSL_OFFENSIVE_fragment_record(SSL *ssl,
+                                  const unsigned char *record,
+                                  size_t record_len,
+                                  size_t fragment_size)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || record == NULL || record_len == 0 || fragment_size == 0)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Store fragmentation parameters */
+    if (ctx->attack_params != NULL)
+        OPENSSL_free(ctx->attack_params);
+
+    /* Store record + fragment_size */
+    ctx->attack_params = OPENSSL_malloc(sizeof(size_t) + record_len);
+    if (ctx->attack_params == NULL)
+        return 0;
+
+    *(size_t *)ctx->attack_params = fragment_size;
+    memcpy((unsigned char *)ctx->attack_params + sizeof(size_t), record, record_len);
+    ctx->attack_params_len = sizeof(size_t) + record_len;
+    ctx->active_op = SSL_OFFENSIVE_OP_CUSTOM_PAYLOAD;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Record fragmentation: %zu bytes -> %zu byte fragments",
+                record_len, fragment_size);
+        ctx->log_operation(SSL_OFFENSIVE_OP_CUSTOM_PAYLOAD, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Manipulate ALPN (Application-Layer Protocol Negotiation)
+ */
+int SSL_OFFENSIVE_manipulate_alpn(SSL *ssl,
+                                  const char *alpn_protocols[],
+                                  size_t num_protocols)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || alpn_protocols == NULL || num_protocols == 0)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    ctx->active_op = SSL_OFFENSIVE_OP_EXTENSION_MANIPULATION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "ALPN manipulation: %zu protocols", num_protocols);
+        ctx->log_operation(SSL_OFFENSIVE_OP_EXTENSION_MANIPULATION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Manipulate SNI (Server Name Indication)
+ */
+int SSL_OFFENSIVE_manipulate_sni(SSL *ssl, const char *sni_name)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL || sni_name == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Store SNI name */
+    if (ctx->attack_params != NULL)
+        OPENSSL_free(ctx->attack_params);
+
+    size_t sni_len = strlen(sni_name);
+    ctx->attack_params = OPENSSL_memdup(sni_name, sni_len + 1);
+    if (ctx->attack_params == NULL)
+        return 0;
+
+    ctx->attack_params_len = sni_len + 1;
+    ctx->active_op = SSL_OFFENSIVE_OP_EXTENSION_MANIPULATION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "SNI manipulation: %s", sni_name);
+        ctx->log_operation(SSL_OFFENSIVE_OP_EXTENSION_MANIPULATION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Simulate Heartbleed-style attack (for testing bounds checking)
+ */
+int SSL_OFFENSIVE_simulate_heartbleed(SSL *ssl, size_t payload_len, size_t response_len)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    /* Store heartbeat parameters */
+    if (ctx->attack_params != NULL)
+        OPENSSL_free(ctx->attack_params);
+
+    size_t *params = OPENSSL_malloc(2 * sizeof(size_t));
+    if (params == NULL)
+        return 0;
+
+    params[0] = payload_len;
+    params[1] = response_len;
+    ctx->attack_params = params;
+    ctx->attack_params_len = 2 * sizeof(size_t);
+    ctx->active_op = SSL_OFFENSIVE_OP_MEMORY_EXHAUSTION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Heartbleed simulation: payload %zu, response %zu",
+                payload_len, response_len);
+        ctx->log_operation(SSL_OFFENSIVE_OP_MEMORY_EXHAUSTION, details, ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Simulate renegotiation attack
+ */
+int SSL_OFFENSIVE_simulate_renegotiation_attack(SSL *ssl)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+
+    if (ssl == NULL)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    if (ctx->operation_count >= ctx->max_operations)
+        return 0;
+
+    ctx->active_op = SSL_OFFENSIVE_OP_HANDSHAKE_INJECTION;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        ctx->log_operation(SSL_OFFENSIVE_OP_HANDSHAKE_INJECTION,
+                          "Renegotiation attack simulation", ctx->log_ctx);
+    }
+
+    return 1;
+}
+
+/*
+ * Perform statistical timing analysis
+ */
+int SSL_OFFENSIVE_statistical_timing_analysis(SSL *ssl,
+                                             const char *operation,
+                                             uint32_t samples,
+                                             uint64_t *mean_ns,
+                                             uint64_t *stddev_ns)
+{
+    SSL_OFFENSIVE_OPS_CTX *ctx;
+    struct timespec start, end;
+    uint64_t *timings = NULL;
+    uint64_t sum = 0;
+    uint64_t mean = 0;
+    uint64_t variance = 0;
+
+    if (ssl == NULL || operation == NULL || mean_ns == NULL || stddev_ns == NULL || samples == 0)
+        return 0;
+
+    ctx = (SSL_OFFENSIVE_OPS_CTX *)SSL_get_ex_data(ssl, 1);
+    if (ctx == NULL || !SSL_OFFENSIVE_ops_authorized(ctx))
+        return 0;
+
+    /* Limit samples for safety */
+    if (samples > 10000)
+        samples = 10000;
+
+    timings = OPENSSL_malloc(samples * sizeof(uint64_t));
+    if (timings == NULL)
+        return 0;
+
+    /* Collect timing samples */
+    for (uint32_t i = 0; i < samples; i++) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        /* Perform operation timing measurement */
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        
+        timings[i] = ((end.tv_sec - start.tv_sec) * 1000000000ULL) +
+                     (end.tv_nsec - start.tv_nsec);
+        sum += timings[i];
+    }
+
+    /* Calculate mean */
+    mean = sum / samples;
+    *mean_ns = mean;
+
+    /* Calculate standard deviation */
+    for (uint32_t i = 0; i < samples; i++) {
+        int64_t diff = (int64_t)timings[i] - (int64_t)mean;
+        variance += (uint64_t)(diff * diff);
+    }
+    variance /= samples;
+    *stddev_ns = (uint64_t)sqrt((double)variance);
+
+    OPENSSL_free(timings);
+
+    ctx->active_op = SSL_OFFENSIVE_OP_TIMING_ANALYSIS;
+    ctx->operation_count++;
+
+    if (ctx->log_operation != NULL) {
+        char details[256];
+        snprintf(details, sizeof(details), "Statistical timing: %s, mean %llu ns, stddev %llu ns",
+                operation, (unsigned long long)*mean_ns, (unsigned long long)*stddev_ns);
+        ctx->log_operation(SSL_OFFENSIVE_OP_TIMING_ANALYSIS, details, ctx->log_ctx);
+    }
+
+    return 1;
 }

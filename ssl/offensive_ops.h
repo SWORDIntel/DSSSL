@@ -259,4 +259,55 @@ int SSL_OFFENSIVE_get_stats(SSL_OFFENSIVE_OPS_CTX *ctx,
  */
 void SSL_OFFENSIVE_reset_counters(SSL_OFFENSIVE_OPS_CTX *ctx);
 
+/*
+ * Enhanced Attack Vectors
+ */
+
+/*
+ * Simulate padding oracle attack (for testing CBC padding validation)
+ */
+int SSL_OFFENSIVE_simulate_padding_oracle(SSL *ssl,
+                                          const unsigned char *ciphertext,
+                                          size_t ciphertext_len,
+                                          int *padding_valid);
+
+/*
+ * Fragment TLS record (for testing fragmentation handling)
+ */
+int SSL_OFFENSIVE_fragment_record(SSL *ssl,
+                                  const unsigned char *record,
+                                  size_t record_len,
+                                  size_t fragment_size);
+
+/*
+ * Manipulate ALPN (Application-Layer Protocol Negotiation)
+ */
+int SSL_OFFENSIVE_manipulate_alpn(SSL *ssl,
+                                  const char *alpn_protocols[],
+                                  size_t num_protocols);
+
+/*
+ * Manipulate SNI (Server Name Indication)
+ */
+int SSL_OFFENSIVE_manipulate_sni(SSL *ssl, const char *sni_name);
+
+/*
+ * Simulate Heartbleed-style attack (for testing bounds checking)
+ */
+int SSL_OFFENSIVE_simulate_heartbleed(SSL *ssl, size_t payload_len, size_t response_len);
+
+/*
+ * Simulate renegotiation attack
+ */
+int SSL_OFFENSIVE_simulate_renegotiation_attack(SSL *ssl);
+
+/*
+ * Perform statistical timing analysis
+ */
+int SSL_OFFENSIVE_statistical_timing_analysis(SSL *ssl,
+                                             const char *operation,
+                                             uint32_t samples,
+                                             uint64_t *mean_ns,
+                                             uint64_t *stddev_ns);
+
 #endif /* SSL_OFFENSIVE_OPS_H */
