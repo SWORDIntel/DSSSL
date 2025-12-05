@@ -60,6 +60,9 @@ void dsmil_policy_ctx_free(DSMIL_POLICY_CTX *ctx);
 /* Get current profile name (for logging) */
 const char *dsmil_policy_get_profile_name(const DSMIL_POLICY_CTX *ctx);
 
+/* Get current profile */
+DSMIL_PROFILE dsmil_policy_get_profile(const DSMIL_POLICY_CTX *ctx);
+
 /* Set security profile from config */
 int dsmil_policy_set_profile(DSMIL_POLICY_CTX *ctx, DSMIL_PROFILE profile);
 

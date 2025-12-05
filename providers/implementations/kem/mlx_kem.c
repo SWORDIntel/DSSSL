@@ -240,6 +240,18 @@ static int mlx_kem_encapsulate(void *vctx, unsigned char *ctext, size_t *clen,
     return ret;
 }
 
+/*
+ * Hybrid KEM Decapsulation - Constant-time critical operation
+ * Combines ML-KEM and ECDH secrets, must be constant-time
+ */
+#if defined(DSLLVM_BUILD) && defined(CSNA_CONSTANT_TIME_CHECK)
+#include "providers/dsmil/csna.h"
+#else
+#define CSNA_CONSTANT_TIME
+#define CSNA_BARRIER() do { } while (0)
+#endif
+
+CSNA_CONSTANT_TIME
 static int mlx_kem_decapsulate(void *vctx, uint8_t *shsec, size_t *slen,
                                const uint8_t *ctext, size_t clen)
 {
@@ -323,6 +335,9 @@ static int mlx_kem_decapsulate(void *vctx, uint8_t *shsec, size_t *slen,
 
     ret = 1;
  end:
+    /* CSNA barrier to ensure constant-time execution completes */
+    CSNA_BARRIER();
+    
     EVP_PKEY_CTX_free(ctx);
     EVP_PKEY_free(xkey);
     return ret;

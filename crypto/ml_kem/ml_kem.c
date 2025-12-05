@@ -19,6 +19,16 @@
 #include <valgrind/memcheck.h>
 #endif
 
+/* CSNA 2.0 annotations for DSLLVM constant-time verification */
+#if defined(DSLLVM_BUILD) && defined(CSNA_CONSTANT_TIME_CHECK)
+#include "providers/dsmil/csna.h"
+#else
+/* No-op CSNA macros for non-DSLLVM builds */
+#define CSNA_CONSTANT_TIME
+#define CSNA_SECRET_PARAM(name) name
+#define CSNA_BARRIER() do { } while (0)
+#endif
+
 #if ML_KEM_SEED_BYTES != ML_KEM_SHARED_SECRET_BYTES + ML_KEM_RANDOM_BYTES
 # error "ML-KEM keygen seed length != shared secret + random bytes length"
 #endif
@@ -2003,9 +2013,14 @@ int ossl_ml_kem_encap_rand(uint8_t *ctext, size_t clen,
                                   r, sizeof(r), key);
 }
 
+/*
+ * ML-KEM Decapsulation - Constant-time critical operation
+ * CSNA annotation ensures DSLLVM verifies constant-time execution
+ */
+CSNA_CONSTANT_TIME
 int ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen,
                       const uint8_t *ctext, size_t clen,
-                      const ML_KEM_KEY *key)
+                      CSNA_SECRET_PARAM(const ML_KEM_KEY *key))
 {
     const ML_KEM_VINFO *vinfo;
     EVP_MD_CTX *mdctx;
@@ -2060,6 +2075,10 @@ int ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen,
     /* Declassify secret inputs and derived outputs before returning control */
     CONSTTIME_DECLASSIFY(key->s, classify_bytes);
     CONSTTIME_DECLASSIFY(shared_secret, slen);
+    
+    /* CSNA barrier to ensure constant-time execution completes */
+    CSNA_BARRIER();
+    
     EVP_MD_CTX_free(mdctx);
 
     return ret;

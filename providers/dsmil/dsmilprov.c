@@ -19,6 +19,7 @@
 #include <openssl/params.h>
 #include "prov/provider_ctx.h"
 #include "prov/providercommon.h"
+#include "prov/implementations/include/prov/implementations.h"
 #include "policy.h"
 #include "events.h"
 
@@ -80,27 +81,144 @@ static int dsmil_get_params(void *provctx, OSSL_PARAM params[])
 }
 
 /*
+ * Get allowed KEM algorithms based on security profile
+ */
+static const OSSL_ALGORITHM *dsmil_get_allowed_kems(DSMIL_PROV_CTX *ctx)
+{
+    static const OSSL_ALGORITHM kem_algs_world[] = {
+        /* WORLD_COMPAT: All algorithms allowed */
+        { "X25519", "provider=default", NULL },
+        { "X448", "provider=default", NULL },
+        { "secp256r1", "provider=default", NULL },
+        { "secp384r1", "provider=default", NULL },
+        { "X25519MLKEM768", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "SecP256r1MLKEM768", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "ML-KEM-512", "provider=default", NULL },
+        { "ML-KEM-768", "provider=default", NULL },
+        { "ML-KEM-1024", "provider=default", NULL },
+        { NULL, NULL, NULL }
+    };
+
+    static const OSSL_ALGORITHM kem_algs_secure[] = {
+        /* DSMIL_SECURE: Hybrid mandatory */
+        { "X25519MLKEM768", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "X448MLKEM1024", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "SecP256r1MLKEM768", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "SecP384r1MLKEM1024", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "ML-KEM-768", "provider=default", NULL },
+        { "ML-KEM-1024", "provider=default", NULL },
+        { NULL, NULL, NULL }
+    };
+
+    static const OSSL_ALGORITHM kem_algs_atomal[] = {
+        /* ATOMAL: Hybrid or PQC-only */
+        { "X25519MLKEM1024", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "SecP384r1MLKEM1024", "provider=default", ossl_mlx_kem_asym_kem_functions },
+        { "ML-KEM-1024", "provider=default", NULL },
+        { NULL, NULL, NULL }
+    };
+
+    if (ctx == NULL || ctx->policy_ctx == NULL)
+        return kem_algs_world;  /* Default to permissive */
+
+    switch (dsmil_policy_get_profile(ctx->policy_ctx)) {
+    case DSMIL_PROFILE_WORLD_COMPAT:
+        return kem_algs_world;
+    case DSMIL_PROFILE_DSMIL_SECURE:
+        return kem_algs_secure;
+    case DSMIL_PROFILE_ATOMAL:
+        return kem_algs_atomal;
+    default:
+        return kem_algs_world;
+    }
+}
+
+/*
+ * Get allowed signature algorithms based on security profile
+ */
+static const OSSL_ALGORITHM *dsmil_get_allowed_signatures(DSMIL_PROV_CTX *ctx)
+{
+    static const OSSL_ALGORITHM sig_algs_world[] = {
+        /* WORLD_COMPAT: Classical signatures allowed */
+        { "ecdsa", "provider=default", NULL },
+        { "ed25519", "provider=default", NULL },
+        { "ed448", "provider=default", NULL },
+        { "ML-DSA-44", "provider=default", NULL },
+        { "ML-DSA-65", "provider=default", NULL },
+        { "ML-DSA-87", "provider=default", NULL },
+        { NULL, NULL, NULL }
+    };
+
+    static const OSSL_ALGORITHM sig_algs_secure[] = {
+        /* DSMIL_SECURE: Hybrid preferred */
+        { "ecdsa", "provider=default", NULL },
+        { "ed25519", "provider=default", NULL },
+        { "ML-DSA-65", "provider=default", NULL },
+        { "ML-DSA-87", "provider=default", NULL },
+        { NULL, NULL, NULL }
+    };
+
+    static const OSSL_ALGORITHM sig_algs_atomal[] = {
+        /* ATOMAL: Hybrid or PQC-only */
+        { "ML-DSA-87", "provider=default", NULL },
+        { NULL, NULL, NULL }
+    };
+
+    if (ctx == NULL || ctx->policy_ctx == NULL)
+        return sig_algs_world;
+
+    switch (dsmil_policy_get_profile(ctx->policy_ctx)) {
+    case DSMIL_PROFILE_WORLD_COMPAT:
+        return sig_algs_world;
+    case DSMIL_PROFILE_DSMIL_SECURE:
+        return sig_algs_secure;
+    case DSMIL_PROFILE_ATOMAL:
+        return sig_algs_atomal;
+    default:
+        return sig_algs_world;
+    }
+}
+
+/*
  * Algorithm query function
  *
- * This provider doesn't implement crypto algorithms; it enforces policy.
- * It operates by intercepting property queries and modifying/blocking
- * algorithm selection based on the active security profile.
- *
- * TODO (Phase 2): Implement property query interception
+ * This provider enforces policy by returning filtered algorithm lists
+ * based on the active security profile.
  */
 static const OSSL_ALGORITHM *dsmil_query(void *provctx,
                                           int operation_id,
                                           int *no_cache)
 {
-    *no_cache = 0;
+    DSMIL_PROV_CTX *ctx = (DSMIL_PROV_CTX *)provctx;
 
-    /*
-     * This policy provider doesn't provide algorithm implementations.
-     * It influences algorithm selection via property queries.
-     *
-     * Future: May provide wrapper algorithms that enforce policy
-     */
-    return NULL;
+    *no_cache = 1;  /* Don't cache - policy may change */
+
+    if (ctx == NULL || ctx->policy_ctx == NULL)
+        return NULL;  /* Fall back to default provider */
+
+    /* Filter algorithms based on operation type */
+    switch (operation_id) {
+    case OSSL_OP_KEYEXCH:
+        /* Key exchange (KEM) operations */
+        return dsmil_get_allowed_kems(ctx);
+
+    case OSSL_OP_SIGNATURE:
+        /* Signature operations */
+        return dsmil_get_allowed_signatures(ctx);
+
+    case OSSL_OP_ASYM_CIPHER:
+    case OSSL_OP_CIPHER:
+    case OSSL_OP_DIGEST:
+    case OSSL_OP_MAC:
+    case OSSL_OP_KDF:
+    case OSSL_OP_RAND:
+        /* For other operations, return NULL to use default provider */
+        /* Policy enforcement happens at higher level (TLS handshake) */
+        return NULL;
+
+    default:
+        return NULL;
+    }
 }
 
 /*

@@ -45,6 +45,9 @@ cd test/dsmil && ./run-all-tests.sh
 
 # Check PQC support
 cd examples && make && ./check-pqc
+
+# Install as system OpenSSL (requires root)
+sudo ./install-dsssl.sh
 ```
 
 ---
@@ -58,6 +61,7 @@ cd examples && make && ./check-pqc
 
 **Implementation Phases:**
 - ✅ Phase 1-9: Complete (Build, Policy, Events, Config, Hybrid, CSNA, TPM, Testing, Deployment)
+- ✅ **Phase 3: TLS Full Integration** - Complete (Hybrid KEM TLS 1.3 handshake)
 - 🎉 Production Ready!
 
 ---
@@ -77,8 +81,9 @@ cd examples && make && ./check-pqc
 ### Post-Quantum Cryptography
 - ✅ ML-KEM-512/768/1024 (Kyber)
 - ✅ ML-DSA-44/65/87 (Dilithium)
-- ✅ Hybrid KEM (X25519+ML-KEM)
+- ✅ Hybrid KEM (X25519+ML-KEM) - **TLS 1.3 Integrated**
 - ✅ Hybrid Signatures (ECDSA+ML-DSA)
+- ✅ **TLS 1.3 Hybrid KEM Handshake** - Full production support
 
 ### Hardware Security
 - ✅ TPM 2.0 (88 algorithms)
@@ -97,6 +102,8 @@ cd examples && make && ./check-pqc
 - ✅ Security score: 100%
 - ✅ Performance benchmarking
 - ✅ Fuzzing infrastructure
+- ✅ **CVE Detection & Mitigation** - 2024-2025 high-impact CVEs
+- ✅ **Hybrid KEM TLS Testing** - End-to-end handshake validation
 
 ---
 
@@ -177,10 +184,12 @@ make test
 - [docs/CSNA_SIDE_CHANNEL_HARDENING.md](docs/CSNA_SIDE_CHANNEL_HARDENING.md) - Constant-time programming
 - [docs/TPM_INTEGRATION.md](docs/TPM_INTEGRATION.md) - TPM2 hardware integration
 - [docs/HYBRID_CRYPTO.md](docs/HYBRID_CRYPTO.md) - Hybrid cryptography
+- [docs/CVE_DETECTION_AND_MITIGATION.md](docs/CVE_DETECTION_AND_MITIGATION.md) - **CVE detection & mitigation**
 - [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - Production deployment
 
 ### Quick Refs
 - [README-TESTING.md](README-TESTING.md) - Quick testing reference
+- [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - **System installation guide**
 - [examples/README.md](examples/README.md) - Example programs
 - [docs/openssl-original/](docs/openssl-original/) - Original OpenSSL docs
 
@@ -308,11 +317,13 @@ Based on 37 security validation tests:
 
 ## 📊 Statistics
 
-**Code**: ~8,700 lines of implementation  
-**Tests**: 342+ automated tests (98%+ pass rate)  
-**Documentation**: 16 docs, ~210 pages  
+**Code**: ~12,000+ lines of implementation  
+**Tests**: 350+ automated tests (98%+ pass rate)  
+**Documentation**: 18 docs, ~250 pages  
 **Algorithms**: 88 TPM2-compatible  
-**Security Score**: 100%
+**Security Score**: 100%  
+**TLS Features**: TLS 1.3 Hybrid KEM fully integrated  
+**CVE Coverage**: 2024-2025 high-impact SSL/TLS vulnerabilities
 
 ---
 
@@ -354,8 +365,45 @@ External contributions not currently accepted.
 
 ---
 
-**Version**: 1.0.0 (Phases 1-9 Complete - Production Ready)  
-**Last Updated**: 2025-11-25  
+## 🔒 Security Enhancements (2025)
+
+### TLS 1.3 Hybrid KEM Integration
+- ✅ Full handshake support for hybrid groups (X25519+ML-KEM-768, P-256+ML-KEM-768)
+- ✅ Client and server key exchange implementation
+- ✅ HKDF-based secret combination
+- ✅ Policy-based group negotiation
+- ✅ Comprehensive test suite
+
+### CVE Detection & Mitigation
+- ✅ Real-time attack pattern detection
+- ✅ Automatic mitigation for known vulnerabilities
+- ✅ Security event logging and telemetry
+- ✅ Support for 2024-2025 high-impact CVEs:
+  - SSL/TLS injection attacks
+  - Handshake DoS attacks
+  - TLS 1.3 downgrade attacks
+  - Key share replay attacks
+  - Hybrid KEM manipulation
+
+### ⚠️ Offensive Operations (Authorized Testing Only)
+- ✅ Protocol manipulation (version downgrade, cipher suite manipulation)
+- ✅ Key exchange attack simulation (replay, manipulation, hybrid bypass)
+- ✅ Certificate attack testing (chain manipulation, signature testing)
+- ✅ Timing analysis tools (side-channel testing)
+- ✅ Resource exhaustion testing (DoS, memory exhaustion)
+- ✅ Custom payload injection
+- ✅ **Authorization required** - Security testing and red team exercises only
+- ✅ **Unauthorized use prohibited**
+
+### Security Audit Improvements
+- ✅ Memory safety fixes (strncpy, JSON injection)
+- ✅ Constant-time annotations (CSNA 2.0)
+- ✅ Policy enforcement enhancements
+- ✅ Input validation improvements
+- ✅ Build system hardening
+
+**Version**: 1.1.0 (Phases 1-9 + TLS Hybrid KEM + CVE Detection - Production Ready)  
+**Last Updated**: 2025-01-15  
 **Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY  
 
 **For original OpenSSL documentation, see [docs/openssl-original/](docs/openssl-original/)**

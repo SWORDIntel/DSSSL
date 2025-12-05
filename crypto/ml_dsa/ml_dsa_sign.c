@@ -20,6 +20,16 @@
 #include "ml_dsa_sign.h"
 #include "ml_dsa_hash.h"
 
+/* CSNA 2.0 annotations for DSLLVM constant-time verification */
+#if defined(DSLLVM_BUILD) && defined(CSNA_CONSTANT_TIME_CHECK)
+#include "providers/dsmil/csna.h"
+#else
+/* No-op CSNA macros for non-DSLLVM builds */
+#define CSNA_CONSTANT_TIME
+#define CSNA_SECRET_PARAM(name) name
+#define CSNA_BARRIER() do { } while (0)
+#endif
+
 #define ML_DSA_MAX_LAMBDA 256 /* bit strength for ML-DSA-87 */
 
 /*
@@ -152,7 +162,13 @@ int ossl_ml_dsa_mu_finalize(EVP_MD_CTX *md_ctx, uint8_t *mu, size_t mu_len)
  * @param out_sig: The output signature buffer
  * @returns 1 on success, 0 on error
  */
-static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
+/*
+ * ML-DSA Signature Generation - Constant-time critical operation
+ * CSNA annotation ensures DSLLVM verifies constant-time execution
+ * Private key material must not leak through timing side-channels
+ */
+CSNA_CONSTANT_TIME
+static int ml_dsa_sign_internal(CSNA_SECRET_PARAM(const ML_DSA_KEY *priv),
                                 const uint8_t *mu, size_t mu_len,
                                 const uint8_t *rnd, size_t rnd_len,
                                 uint8_t *out_sig)
@@ -456,7 +472,13 @@ int ossl_ml_dsa_sign(const ML_DSA_KEY *priv, int msg_is_mu,
             goto err;
     }
 
+    /* CSNA barrier before calling constant-time signature generation */
+    CSNA_BARRIER();
+    
     ret = ml_dsa_sign_internal(priv, mu_ptr, mu_len, rand, rand_len, sig);
+    
+    /* CSNA barrier after signature generation */
+    CSNA_BARRIER();
 
 err:
     EVP_MD_CTX_free(md_ctx);

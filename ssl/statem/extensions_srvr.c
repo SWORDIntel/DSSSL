@@ -12,6 +12,51 @@
 #include "statem_local.h"
 #include "internal/cryptlib.h"
 #include "internal/ssl_unwrap.h"
+#include "../tls13_hybrid_kem.h"
+#include "internal/tlsgroups.h"
+
+/*
+ * Check if a group ID is a hybrid KEM group
+ */
+static int is_hybrid_kem_group(uint16_t group_id)
+{
+    return (group_id == OSSL_TLS_GROUP_ID_X25519MLKEM768 ||
+            group_id == OSSL_TLS_GROUP_ID_SecP256r1MLKEM768 ||
+            group_id == OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024);
+}
+
+/*
+ * Get classical group ID from hybrid group ID
+ */
+static uint16_t get_classical_group_from_hybrid(uint16_t hybrid_group_id)
+{
+    switch (hybrid_group_id) {
+    case OSSL_TLS_GROUP_ID_X25519MLKEM768:
+        return OSSL_TLS_GROUP_ID_x25519;
+    case OSSL_TLS_GROUP_ID_SecP256r1MLKEM768:
+        return OSSL_TLS_GROUP_ID_secp256r1;
+    case OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024:
+        return OSSL_TLS_GROUP_ID_secp384r1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Get PQC group ID from hybrid group ID
+ */
+static uint16_t get_pqc_group_from_hybrid(uint16_t hybrid_group_id)
+{
+    switch (hybrid_group_id) {
+    case OSSL_TLS_GROUP_ID_X25519MLKEM768:
+    case OSSL_TLS_GROUP_ID_SecP256r1MLKEM768:
+        return OSSL_TLS_GROUP_ID_mlkem768;
+    case OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024:
+        return OSSL_TLS_GROUP_ID_mlkem1024;
+    default:
+        return 0;
+    }
+}
 
 #define COOKIE_STATE_FORMAT_VERSION     1
 
@@ -629,6 +674,112 @@ static int tls_accept_ksgroup(SSL_CONNECTION *s, uint16_t ksgroup, PACKET *encod
     s->s3.group_id_candidate = ksgroup;
     /* Cache the selected group ID in the SSL_SESSION */
     s->session->kex_group = ksgroup;
+
+    /* Handle hybrid KEM groups specially */
+    if (is_hybrid_kem_group(ksgroup)) {
+        PACKET classical_pubkey, pqc_pubkey;
+        uint16_t classical_group_id, pqc_group_id;
+        EVP_PKEY *classical_peer = NULL, *pqc_peer = NULL;
+        int ret = 0;
+
+        classical_group_id = get_classical_group_from_hybrid(ksgroup);
+        pqc_group_id = get_pqc_group_from_hybrid(ksgroup);
+
+        if (classical_group_id == 0 || pqc_group_id == 0) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            return 0;
+        }
+
+        /* Parse hybrid key share: [classical_len][classical_pubkey][pqc_len][pqc_pubkey] */
+        /* Both keys are length-prefixed (2-byte length) */
+        const unsigned char *classical_pubkey_data = NULL;
+        const unsigned char *pqc_pubkey_data = NULL;
+        size_t classical_len, pqc_len;
+        PACKET classical_pkt, pqc_pkt;
+        
+        /* Extract classical public key length and data */
+        if (!PACKET_get_net_2(encoded_pubkey, &classical_len) ||
+            classical_len == 0 || classical_len > PACKET_remaining(encoded_pubkey)) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+        
+        if (!PACKET_get_bytes(encoded_pubkey, &classical_pubkey_data, classical_len)) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+        
+        /* Extract PQC public key length and data */
+        if (!PACKET_get_net_2(encoded_pubkey, &pqc_len) ||
+            pqc_len == 0 || pqc_len > PACKET_remaining(encoded_pubkey)) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+        
+        if (!PACKET_get_bytes(encoded_pubkey, &pqc_pubkey_data, pqc_len)) {
+            SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
+            return 0;
+        }
+
+        /* Generate classical peer key */
+        if ((classical_peer = ssl_generate_param_group(s, classical_group_id)) == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNABLE_TO_FIND_ECDH_PARAMETERS);
+            goto err;
+        }
+
+        /* Set classical public key from encoded data */
+        if (tls13_set_encoded_pub_key(classical_peer, classical_pubkey_data, classical_len) <= 0) {
+            SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_KEY_SHARE);
+            goto err;
+        }
+
+        /* Generate PQC peer key */
+        if ((pqc_peer = ssl_generate_param_group(s, pqc_group_id)) == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNABLE_TO_FIND_ECDH_PARAMETERS);
+            goto err;
+        }
+
+        /* Set PQC public key from encoded data */
+        if (tls13_set_encoded_pub_key(pqc_peer, pqc_pubkey_data, pqc_len) <= 0) {
+            SSLfatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_KEY_SHARE);
+            goto err;
+        }
+
+        /* Store peer keys: classical as primary (for compatibility) */
+        s->s3.peer_tmp = classical_peer;
+        classical_peer = NULL;  /* Transfer ownership */
+        
+        /* Store PQC peer key in ks_pkey array for hybrid operations */
+        /* Find an available slot */
+        if (s->s3.tmp.num_ks_pkey < OPENSSL_CLIENT_MAX_KEY_SHARES) {
+            size_t idx = s->s3.tmp.num_ks_pkey;
+            s->s3.tmp.ks_pkey[idx] = pqc_peer;
+            s->s3.tmp.ks_group_id[idx] = pqc_group_id;
+            s->s3.tmp.num_ks_pkey++;
+            /* Mark that we're using hybrid KEM */
+            s->s3.group_id = ksgroup;  /* Store hybrid group ID */
+            pqc_peer = NULL;  /* Transfer ownership */
+        } else {
+            /* No space - this shouldn't happen, but handle gracefully */
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            goto err;
+        }
+
+        ret = 1;
+        goto done;
+
+    err:
+        if (classical_peer != NULL)
+            EVP_PKEY_free(classical_peer);
+        if (pqc_peer != NULL)
+            EVP_PKEY_free(pqc_peer);
+        return 0;
+
+    done:
+        return ret;
+    }
+
+    /* Standard single-group key share */
     if ((s->s3.peer_tmp = ssl_generate_param_group(s, ksgroup)) == NULL) {
         SSLfatal(s,
                  SSL_AD_INTERNAL_ERROR,
@@ -1983,7 +2134,150 @@ EXT_RETURN tls_construct_stoc_key_share(SSL_CONNECTION *s, WPACKET *pkt,
         return EXT_RETURN_FAIL;
     }
 
-    if (!ginf->is_kem) {
+    /* Check if this is a hybrid KEM group */
+    if (is_hybrid_kem_group(s->s3.group_id)) {
+        /* Hybrid KEM mode: perform both classical and PQC encapsulation */
+        unsigned char *classical_ct = NULL, *pqc_ct = NULL;
+        size_t classical_ctlen = 0, pqc_ctlen = 0;
+        EVP_PKEY *pqc_ckey = NULL;
+        TLS13_HYBRID_KEM_CTX *hybrid_ctx = NULL;
+        uint16_t classical_group_id, pqc_group_id;
+        int ret = 0;
+
+        /* Get component group IDs */
+        classical_group_id = get_classical_group_from_hybrid(s->s3.group_id);
+        pqc_group_id = get_pqc_group_from_hybrid(s->s3.group_id);
+
+        /* Find PQC peer key from ks_pkey array */
+        pqc_ckey = NULL;
+        for (size_t i = 0; i < s->s3.tmp.num_ks_pkey; i++) {
+            if (s->s3.tmp.ks_group_id[i] == pqc_group_id) {
+                pqc_ckey = s->s3.tmp.ks_pkey[i];
+                break;
+            }
+        }
+
+        if (pqc_ckey == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_UNABLE_TO_FIND_ECDH_PARAMETERS);
+            return EXT_RETURN_FAIL;
+        }
+
+        /* Initialize hybrid KEM context */
+        hybrid_ctx = tls13_hybrid_kem_ctx_new();
+        if (hybrid_ctx == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_MALLOC_FAILURE);
+            return EXT_RETURN_FAIL;
+        }
+
+        /* Perform classical encapsulation */
+        /* Save current PMS state if any */
+        unsigned char *saved_pms = NULL;
+        size_t saved_pmslen = 0;
+        if (s->s3.tmp.pms != NULL && s->s3.tmp.pmslen > 0) {
+            saved_pms = OPENSSL_memdup(s->s3.tmp.pms, s->s3.tmp.pmslen);
+            saved_pmslen = s->s3.tmp.pmslen;
+        }
+
+        if (ssl_encapsulate(s, ckey, &classical_ct, &classical_ctlen, 0) == 0) {
+            /* SSLfatal() already called */
+            OPENSSL_free(saved_pms);
+            tls13_hybrid_kem_ctx_free(hybrid_ctx);
+            return EXT_RETURN_FAIL;
+        }
+
+        /* Store classical secret */
+        if (s->s3.tmp.pmslen > 0 && s->s3.tmp.pmslen <= sizeof(hybrid_ctx->classical_secret)) {
+            memcpy(hybrid_ctx->classical_secret, s->s3.tmp.pms, s->s3.tmp.pmslen);
+            hybrid_ctx->classical_secret_len = s->s3.tmp.pmslen;
+        }
+
+        /* Perform PQC encapsulation */
+        if (ssl_encapsulate(s, pqc_ckey, &pqc_ct, &pqc_ctlen, 0) == 0) {
+            /* SSLfatal() already called */
+            OPENSSL_free(classical_ct);
+            OPENSSL_free(saved_pms);
+            tls13_hybrid_kem_ctx_free(hybrid_ctx);
+            return EXT_RETURN_FAIL;
+        }
+
+        /* Store PQC secret */
+        if (s->s3.tmp.pmslen > 0 && s->s3.tmp.pmslen <= sizeof(hybrid_ctx->pqc_secret)) {
+            memcpy(hybrid_ctx->pqc_secret, s->s3.tmp.pms, s->s3.tmp.pmslen);
+            hybrid_ctx->pqc_secret_len = s->s3.tmp.pmslen;
+        }
+        
+        /* Get group names from TLS group info */
+        const TLS_GROUP_INFO *ginf_classical = NULL, *ginf_pqc = NULL;
+        const char *classical_name = "X25519";  /* Default fallback */
+        const char *pqc_name = "ML-KEM-768";    /* Default fallback */
+        
+        SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(s);
+        if (sctx != NULL) {
+            ginf_classical = tls1_group_id_lookup(sctx, classical_group_id);
+            ginf_pqc = tls1_group_id_lookup(sctx, pqc_group_id);
+            
+            if (ginf_classical != NULL && ginf_classical->tlsname != NULL)
+                classical_name = ginf_classical->tlsname;
+            if (ginf_pqc != NULL && ginf_pqc->tlsname != NULL)
+                pqc_name = ginf_pqc->tlsname;
+        }
+        
+        /* Combine secrets via HKDF */
+        uint8_t combined_secret[64];
+        size_t combined_secret_len = sizeof(combined_secret);
+
+        if (tls13_hybrid_kem_combine_secrets(hybrid_ctx, classical_name, pqc_name,
+                                              combined_secret, &combined_secret_len) == 0) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            OPENSSL_free(classical_ct);
+            OPENSSL_free(pqc_ct);
+            OPENSSL_free(saved_pms);
+            tls13_hybrid_kem_ctx_free(hybrid_ctx);
+            return EXT_RETURN_FAIL;
+        }
+
+        /* Store combined secret as PMS */
+        if (s->s3.tmp.pms != NULL)
+            OPENSSL_free(s->s3.tmp.pms);
+        s->s3.tmp.pms = OPENSSL_memdup(combined_secret, combined_secret_len);
+        if (s->s3.tmp.pms == NULL) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_MALLOC_FAILURE);
+            OPENSSL_free(classical_ct);
+            OPENSSL_free(pqc_ct);
+            OPENSSL_free(saved_pms);
+            tls13_hybrid_kem_ctx_free(hybrid_ctx);
+            return EXT_RETURN_FAIL;
+        }
+        s->s3.tmp.pmslen = combined_secret_len;
+        OPENSSL_cleanse(combined_secret, sizeof(combined_secret));
+
+        /* Encode hybrid ciphertext: [classical_len][classical_ct][pqc_len][pqc_ct] */
+        if (!WPACKET_start_sub_packet_u16(pkt)
+                || !WPACKET_put_bytes_u16(pkt, (uint16_t)classical_ctlen)
+                || !WPACKET_memcpy(pkt, classical_ct, classical_ctlen)
+                || !WPACKET_put_bytes_u16(pkt, (uint16_t)pqc_ctlen)
+                || !WPACKET_memcpy(pkt, pqc_ct, pqc_ctlen)
+                || !WPACKET_close(pkt)
+                || !WPACKET_close(pkt)) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+            OPENSSL_free(classical_ct);
+            OPENSSL_free(pqc_ct);
+            OPENSSL_free(saved_pms);
+            tls13_hybrid_kem_ctx_free(hybrid_ctx);
+            return EXT_RETURN_FAIL;
+        }
+
+        OPENSSL_free(classical_ct);
+        OPENSSL_free(pqc_ct);
+        OPENSSL_free(saved_pms);
+        tls13_hybrid_kem_ctx_free(hybrid_ctx);
+
+        /* Generate handshake secret from combined PMS */
+        if (ssl_gensecret(s, s->s3.tmp.pms, s->s3.tmp.pmslen) == 0) {
+            /* SSLfatal() already called */
+            return EXT_RETURN_FAIL;
+        }
+    } else if (!ginf->is_kem) {
         /* Regular KEX */
         skey = ssl_generate_pkey(s, ckey);
         if (skey == NULL) {
@@ -2018,7 +2312,7 @@ EXT_RETURN tls_construct_stoc_key_share(SSL_CONNECTION *s, WPACKET *pkt,
         }
         s->s3.tmp.pkey = skey;
     } else {
-        /* KEM mode */
+        /* Standard KEM mode */
         unsigned char *ct = NULL;
         size_t ctlen = 0;
 
