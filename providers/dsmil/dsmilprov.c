@@ -6,8 +6,8 @@
  * This provider enforces security profiles (WORLD_COMPAT, DSMIL_SECURE, ATOMAL)
  * and emits telemetry events for DEFRAMEWORK integration.
  *
- * See: OPENSSL_SECURE_SPEC.md Section 5 (Provider Architecture)
- *      IMPLEMENTATION_PLAN.md Phase 2
+ * See: docs/core/OPENSSL_SECURE_SPEC.md Section 5 (Provider Architecture)
+ *      docs/core/IMPLEMENTATION_PLAN.md Phase 2
  */
 
 #include <string.h>

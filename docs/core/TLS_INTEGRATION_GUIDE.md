@@ -240,7 +240,7 @@ key_exchange format:
 
 - `ssl/tls13_hybrid_kem.h` - API definitions
 - `ssl/tls13_hybrid_kem.c` - Implementation skeleton
-- `DSSSL_SECURITY_AUDIT_REPORT.md` Section 7.1 - Full specification
+- `../reports/DSSSL_SECURITY_AUDIT_REPORT.md` Section 7.1 - Full specification
 - RFC 8446 (TLS 1.3) - Base protocol
 - Draft-ietf-tls-hybrid-design - Hybrid KEX draft (when published)
 

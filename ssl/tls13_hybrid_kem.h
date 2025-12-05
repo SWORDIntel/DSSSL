@@ -7,7 +7,7 @@
  * P-256+ML-KEM) into TLS 1.3 handshake.
  *
  * STATUS: Structure defined, implementation pending
- * See: DSSSL_SECURITY_AUDIT_REPORT.md Section 7.1
+ * See: docs/reports/DSSSL_SECURITY_AUDIT_REPORT.md Section 7.1
  */
 
 #ifndef TLS13_HYBRID_KEM_H

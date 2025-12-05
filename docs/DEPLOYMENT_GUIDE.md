@@ -754,7 +754,7 @@ tpm2_getrandom --benchmark 1000
 
 ## References
 
-1. **[OPENSSL_SECURE_SPEC.md](../OPENSSL_SECURE_SPEC.md)** - Complete specification
+1. **[OPENSSL_SECURE_SPEC.md](../core/OPENSSL_SECURE_SPEC.md)** - Complete specification
 2. **[PHASE8_COMPREHENSIVE_TESTING.md](PHASE8_COMPREHENSIVE_TESTING.md)** - Testing procedures
 3. **[TPM_INTEGRATION.md](TPM_INTEGRATION.md)** - TPM troubleshooting
 4. **[CSNA_SIDE_CHANNEL_HARDENING.md](CSNA_SIDE_CHANNEL_HARDENING.md)** - Security details

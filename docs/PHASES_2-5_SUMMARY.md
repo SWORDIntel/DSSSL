@@ -334,8 +334,8 @@ export OPENSSL_CONF=configs/dsmil-secure.cnf
 
 ## References
 
-- [OPENSSL_SECURE_SPEC.md](OPENSSL_SECURE_SPEC.md) - Security specification
-- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - Full implementation roadmap
+- [core/OPENSSL_SECURE_SPEC.md](core/OPENSSL_SECURE_SPEC.md) - Security specification
+- [core/IMPLEMENTATION_PLAN.md](core/IMPLEMENTATION_PLAN.md) - Full implementation roadmap
 - [docs/TESTING.md](docs/TESTING.md) - Testing guide
 - [docs/HYBRID_CRYPTO.md](docs/HYBRID_CRYPTO.md) - Hybrid crypto guide
 - [providers/dsmil/](providers/dsmil/) - Implementation code

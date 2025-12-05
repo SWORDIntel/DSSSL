@@ -41,8 +41,8 @@ This directory contains the original OpenSSL project documentation that was in t
 For DSMIL-specific documentation, see:
 - `../README.md` - DSMIL OpenSSL main README
 - `../DOCUMENTATION_INDEX.md` - Complete DSMIL documentation index
-- `../OPENSSL_SECURE_SPEC.md` - DSMIL security specification
-- `../IMPLEMENTATION_PLAN.md` - DSMIL implementation plan
+- `../core/OPENSSL_SECURE_SPEC.md` - DSMIL security specification
+- `../core/IMPLEMENTATION_PLAN.md` - DSMIL implementation plan
 - `../docs/` - All DSMIL implementation guides
 
 ---

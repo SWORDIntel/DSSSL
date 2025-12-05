@@ -66,10 +66,10 @@ All critical security fixes and high-priority improvements from the security aud
 
 ## Documentation
 
-- **Full Audit Report**: `DSSSL_SECURITY_AUDIT_REPORT.md`
-- **Quick Summary**: `AUDIT_SUMMARY.md`
-- **Remediation Plan**: `REMEDIATION_PLAN.md`
-- **Implementation Details**: `IMPROVEMENTS_IMPLEMENTED.md`
+- **Full Audit Report**: `../reports/DSSSL_SECURITY_AUDIT_REPORT.md`
+- **Quick Summary**: `../reports/AUDIT_SUMMARY.md`
+- **Remediation Plan**: `../reports/REMEDIATION_PLAN.md`
+- **Implementation Details**: `../reports/IMPROVEMENTS_IMPLEMENTED.md`
 
 ---
 

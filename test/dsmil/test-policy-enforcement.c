@@ -6,7 +6,7 @@
  * Tests that the DSMIL policy provider correctly filters algorithms
  * based on security profiles (WORLD_COMPAT, DSMIL_SECURE, ATOMAL).
  *
- * See: DSSSL_SECURITY_AUDIT_REPORT.md Section 7.2
+ * See: docs/reports/DSSSL_SECURITY_AUDIT_REPORT.md Section 7.2
  */
 
 #include <stdio.h>

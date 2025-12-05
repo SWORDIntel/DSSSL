@@ -320,8 +320,8 @@ if (cert != NULL) {
 
 ## References
 
-- [DSMIL_README.md](../DSMIL_README.md) - Main documentation
-- [OPENSSL_SECURE_SPEC.md](../OPENSSL_SECURE_SPEC.md) - Specification
+- [Documentation Index](../docs/DOCUMENTATION_INDEX.md) - Main documentation hub
+- [OPENSSL_SECURE_SPEC.md](../docs/core/OPENSSL_SECURE_SPEC.md) - Specification
 - [docs/TESTING.md](../docs/TESTING.md) - Testing guide
 - [OpenSSL Manual](https://www.openssl.org/docs/man3.0/)
 

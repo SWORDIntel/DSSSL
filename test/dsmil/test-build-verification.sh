@@ -101,9 +101,9 @@ echo ""
 test_file_exists "Configurations/10-dsllvm.conf"
 test_file_exists "util/build-dsllvm-world.sh"
 test_file_exists "util/build-dsllvm-dsmil.sh"
-test_file_exists "OPENSSL_SECURE_SPEC.md"
-test_file_exists "IMPLEMENTATION_PLAN.md"
-test_file_exists "DSMIL_README.md"
+test_file_exists "docs/core/OPENSSL_SECURE_SPEC.md"
+test_file_exists "docs/core/IMPLEMENTATION_PLAN.md"
+test_file_exists "docs/DSMIL_README_ARCHIVE.md"
 
 echo ""
 
@@ -274,7 +274,7 @@ log_info "Test Suite 9: Documentation Validation"
 echo ""
 
 # Check spec completeness
-SPEC=$(cat OPENSSL_SECURE_SPEC.md)
+SPEC=$(cat docs/core/OPENSSL_SECURE_SPEC.md)
 test_contains "$SPEC" "WORLD_COMPAT" "Spec: WORLD_COMPAT profile"
 test_contains "$SPEC" "DSMIL_SECURE" "Spec: DSMIL_SECURE profile"
 test_contains "$SPEC" "ATOMAL" "Spec: ATOMAL profile"
@@ -282,7 +282,7 @@ test_contains "$SPEC" "ML-KEM" "Spec: ML-KEM documentation"
 test_contains "$SPEC" "ML-DSA" "Spec: ML-DSA documentation"
 
 # Check implementation plan
-PLAN=$(cat IMPLEMENTATION_PLAN.md)
+PLAN=$(cat docs/core/IMPLEMENTATION_PLAN.md)
 test_contains "$PLAN" "Phase 1" "Plan: Phase 1 defined"
 test_contains "$PLAN" "Phase 2" "Plan: Phase 2 defined"
 test_contains "$PLAN" "Policy Provider" "Plan: Policy provider mentioned"
