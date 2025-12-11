@@ -205,7 +205,20 @@ Use OpenSSL 3 provider model with a curated set of providers.
 
    * Wraps default provider, restricting to FIPS-aligned algorithms if you ever need that regime.
 
-### 5.2 Provider Selection & Properties
+### 5.2 Optional oqsprovider (extended PQC coverage)
+
+* Purpose: add **research/interop** PQC coverage beyond ML-KEM/ML-DSA (BIKE, HQC, FrodoKEM, Falcon, SPHINCS+, MAYO, CROSS) via [open-quantum-safe/oqs-provider](https://github.com/open-quantum-safe/oqs-provider).
+* Build: `./util/build-dsllvm-{world,dsmil}.sh --with-oqs-provider [--liboqs-branch=X.Y.Z]` (defaults to liboqs 0.11.0) stages `liboqs` + `oqsprovider`; if the install prefix is not writable it falls back to `oqs-provider/.local-*`.
+* Runtime wiring:
+  * Set `OPENSSL_MODULES` to the directory containing `oqsprovider.so` (the build scripts print this).
+  * Set `OPENSSL_CONF` to `configs/oqs-provider.cnf` (or merge that provider stanza into a profile config).
+* Version constraints (per upstream):
+  * OpenSSL **>= 3.2** required for TLS 1.3 PQ signatures; CMS fixes also land there.
+  * OpenSSL **>= 3.4** required for `openssl pkeyutl -encap/-decap` (KEM CLI testing).
+  * OpenSSL **>= 3.5** ships ML-KEM/ML-DSA/SLH-DSA natively; oqs-provider auto-disables those to avoid OID clashes—keep DSMIL-native ML-KEM/ML-DSA for production and treat oqs-provider as supplemental.
+* Policy: oqs-provider stays **off by default** in production profiles; enable only for interop testing and research.
+
+### 5.3 Provider Selection & Properties
 
 Use OpenSSL property queries:
 

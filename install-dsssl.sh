@@ -217,6 +217,23 @@ install_dsssl() {
         ldconfig
     fi
     
+    # Install provider modules (oqs-provider, policy, etc.)
+    MODULE_SRC=""
+    if [[ -d "${SCRIPT_DIR}/ossl-modules" ]]; then
+        MODULE_SRC="${SCRIPT_DIR}/ossl-modules"
+    elif [[ -d "${SCRIPT_DIR}/oqs-provider/_build/lib" ]]; then
+        MODULE_SRC="${SCRIPT_DIR}/oqs-provider/_build/lib"
+    fi
+
+    if [[ -n "$MODULE_SRC" ]]; then
+        MODULE_DEST="${INSTALL_PREFIX}/lib64/ossl-modules"
+        mkdir -p "$MODULE_DEST"
+        log_info "Installing provider modules from ${MODULE_SRC} to ${MODULE_DEST}..."
+        cp -v "${MODULE_SRC}"/*.so "$MODULE_DEST"/ 2>&1 | tee -a "$LOG_FILE" || true
+    else
+        log_warn "Provider modules not found; ensure oqs-provider was built (ossl-modules missing)"
+    fi
+
     # Install include files
     log_info "Installing include files..."
     if [[ -d "$BUILD_DIR/include/openssl" ]]; then
@@ -225,6 +242,12 @@ install_dsssl() {
     elif [[ -d "include/openssl" ]]; then
         mkdir -p "$INSTALL_PREFIX/include"
         cp -r "include/openssl" "$INSTALL_PREFIX/include/"
+    fi
+
+    # Install configs (profiles + oqs-provider)
+    if [[ -d "${SCRIPT_DIR}/configs" ]]; then
+        mkdir -p "${INSTALL_PREFIX}/ssl"
+        cp -v "${SCRIPT_DIR}/configs/"*.cnf "${INSTALL_PREFIX}/ssl/" 2>&1 | tee -a "$LOG_FILE" || true
     fi
     
     log_info "DSSSL installation complete"
@@ -259,6 +282,14 @@ verify_installation() {
     else
         log_error "Basic functionality test failed"
         return 1
+    fi
+
+    # Provider sanity (optional, best-effort)
+    if [[ -d "${INSTALL_PREFIX}/lib64/ossl-modules" ]]; then
+        OPENSSL_MODULES="${INSTALL_PREFIX}/lib64/ossl-modules" \
+        OPENSSL_CONF="${INSTALL_PREFIX}/ssl/world.cnf" \
+        $NEW_OPENSSL list -providers >/dev/null 2>&1 && \
+        log_info "Provider load check passed (OPENSSL_MODULES=${INSTALL_PREFIX}/lib64/ossl-modules)"
     fi
     
     # Test library loading
@@ -366,6 +397,10 @@ main() {
         log_info "Installation completed successfully!"
         log_info "Backup location: $BACKUP_DIR"
         log_info "Rollback script: $BACKUP_DIR/rollback.sh"
+        log_info "Set runtime env (example):"
+        log_info "  export OPENSSL_MODULES=${INSTALL_PREFIX}/lib64/ossl-modules"
+        log_info "  export OPENSSL_CONF=${INSTALL_PREFIX}/ssl/world.cnf   # or dsmil-secure.cnf / atomal.cnf"
+        log_info "  export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib64:${INSTALL_PREFIX}/lib:\$LD_LIBRARY_PATH"
         log_info "=========================================="
     else
         log_error "Installation verification failed"

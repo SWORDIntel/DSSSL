@@ -166,6 +166,21 @@ make -j$(nproc)
 make test
 ```
 
+### With oqs-provider (built by default, extended PQC coverage)
+```bash
+# Build and stage oqs-provider + liboqs (falls back to local staging if /opt is not writable)
+./util/build-dsllvm-world.sh --clean --test
+# To skip oqs-provider: --without-oqs-provider
+
+# After build, point OpenSSL to the staged provider
+export OPENSSL_MODULES=$(find oqs-provider -name ossl-modules -type d | head -n1)
+export OPENSSL_CONF=$(pwd)/configs/oqs-provider.cnf
+
+# Quick smoke
+./apps/openssl list -kem-algorithms -provider oqsprovider -provider-path "$OPENSSL_MODULES"
+```
+*Notes*: oqs-provider is built by default for extended PQC coverage (interop/research). Submodule is pinned to oqs-provider **v0.10.0**; override the liboqs branch with `--liboqs-branch`. OpenSSL ≥3.2 is required for TLS PQ signatures; OpenSSL ≥3.5 disables ML-KEM/ML-DSA inside oqs-provider because those are native.
+
 ---
 
 ## 📖 Documentation

@@ -1,0 +1,26 @@
+# OQS Provider activation for DSSSL
+# Requires OPENSSL_MODULES to point to the directory containing oqsprovider.so
+# Example (world build):
+#   export OPENSSL_MODULES=/opt/openssl-world/lib64/ossl-modules
+#   export OPENSSL_CONF=/opt/openssl-world/ssl/oqs-provider.cnf
+
+openssl_conf = openssl_init
+
+[openssl_init]
+providers = provider_sect
+alg_section = algorithm_sect
+
+[provider_sect]
+default = default_sect
+oqsprovider = oqs_sect
+
+[default_sect]
+activate = 1
+
+[oqs_sect]
+activate = 1
+module = $ENV::OPENSSL_MODULES/oqsprovider.so
+
+[algorithm_sect]
+default_properties = profile=DSMIL_SECURE,security-level=high
+

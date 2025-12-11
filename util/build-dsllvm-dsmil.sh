@@ -35,6 +35,8 @@ INSTALL=0
 PREFIX="/opt/openssl-dsmil"
 OPENSSLDIR="/opt/openssl-dsmil/ssl"
 BUILD_JOBS=$(nproc)
+WITH_OQS=1
+LIBOQS_BRANCH="0.11.0"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -51,13 +53,25 @@ while [[ $# -gt 0 ]]; do
             INSTALL=1
             shift
             ;;
+        --with-oqs-provider)
+            WITH_OQS=1
+            shift
+            ;;
+        --without-oqs-provider)
+            WITH_OQS=0
+            shift
+            ;;
+        --liboqs-branch=*)
+            LIBOQS_BRANCH="${1#*=}"
+            shift
+            ;;
         --prefix=*)
             PREFIX="${1#*=}"
             OPENSSLDIR="${PREFIX}/ssl"
             shift
             ;;
         --help|-h)
-            echo "Usage: $0 [--clean] [--test] [--install] [--prefix=PATH] [--help]"
+            echo "Usage: $0 [--clean] [--test] [--install] [--with-oqs-provider] [--liboqs-branch=X.Y.Z] [--prefix=PATH] [--help]"
             echo ""
             echo "Build DSMIL-grade OpenSSL (DSMIL_SECURE variant) with DSLLVM"
             echo ""
@@ -65,11 +79,13 @@ while [[ $# -gt 0 ]]; do
             echo "  --clean         Clean before building"
             echo "  --test          Run test suite after build"
             echo "  --install       Install after successful build (requires sudo)"
+            echo "  --with-oqs-provider  Build and stage oqs-provider (liboqs + provider)"
+            echo "  --liboqs-branch=BR   liboqs branch/tag to build (default: 0.11.0)"
             echo "  --prefix=PATH   Installation prefix (default: /opt/openssl-dsmil)"
             echo "  --help          Show this help"
             echo ""
             echo "Example:"
-            echo "  $0 --clean --test --prefix=/opt/openssl-dsmil"
+            echo "  $0 --clean --test --with-oqs-provider --prefix=/opt/openssl-dsmil"
             exit 0
             ;;
         *)
@@ -108,6 +124,10 @@ if ! command -v dsclang &> /dev/null; then
     export PATH="/tmp/dsllvm-bin:$PATH"
 fi
 
+# Honor DSLLVM/clang in downstream cmake builds
+export CC=$(command -v dsclang || command -v clang)
+export CXX=$(command -v dsclang++ || command -v clang++)
+
 # Display compiler version
 echo -e "${GREEN}Compiler version:${NC}"
 dsclang --version | head -1
@@ -136,6 +156,77 @@ if [ -f /proc/cpuinfo ]; then
 fi
 echo ""
 
+# Build oqs-provider (liboqs + provider)
+build_oqs_provider() {
+    local TARGET_NAME="$1" # world | dsmil
+    local OPENSSL_ROOT="${PWD}"
+    local MODULE_DIR
+
+    # Choose an install prefix for oqs-provider. If we are not installing system-wide or lack write
+    # permissions under the requested prefix, stage locally.
+    local OQS_PREFIX="${PREFIX}"
+    if [ ! -w "$(dirname "${PREFIX}")" ]; then
+        if [ $INSTALL -eq 1 ]; then
+            echo -e "${YELLOW}Prefix not writable; staging oqs-provider under repo${NC}"
+        fi
+        OQS_PREFIX="${OPENSSL_ROOT}/oqs-provider/.local-${TARGET_NAME}"
+    fi
+    MODULE_DIR="${OQS_PREFIX}/lib64/ossl-modules"
+
+    echo -e "${BLUE}Building liboqs (${LIBOQS_BRANCH})...${NC}"
+    pushd oqs-provider > /dev/null
+
+    if [ ! -d liboqs ]; then
+        git clone --depth 1 --branch "${LIBOQS_BRANCH}" https://github.com/open-quantum-safe/liboqs.git
+    else
+        git -C liboqs fetch --tags
+        git -C liboqs checkout "${LIBOQS_BRANCH}"
+        git -C liboqs pull --ff-only --depth 1 origin "${LIBOQS_BRANCH}" || true
+    fi
+
+    cmake -S liboqs -B liboqs/build \
+        -DCMAKE_INSTALL_PREFIX="${OQS_PREFIX}" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DOQS_USE_OPENSSL=ON
+    cmake --build liboqs/build -- -j${BUILD_JOBS}
+    cmake --install liboqs/build
+
+    echo -e "${BLUE}Building oqs-provider against local OpenSSL...${NC}"
+    local LIBCRYPTO_PATH="${OPENSSL_ROOT}/libcrypto.so"
+    local LIBSSL_PATH="${OPENSSL_ROOT}/libssl.so"
+    if [ ! -f "${LIBCRYPTO_PATH}" ]; then
+        LIBCRYPTO_PATH=$(ls "${OPENSSL_ROOT}"/libcrypto.so.* | head -n1)
+    fi
+    if [ ! -f "${LIBSSL_PATH}" ]; then
+        LIBSSL_PATH=$(ls "${OPENSSL_ROOT}"/libssl.so.* | head -n1)
+    fi
+
+    cmake -S . -B _build \
+        -DCMAKE_INSTALL_PREFIX="${OQS_PREFIX}" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DOPENSSL_MODULES_DIR="${MODULE_DIR}" \
+        -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT}" \
+        -DOPENSSL_CRYPTO_LIBRARY="${LIBCRYPTO_PATH}" \
+        -DOPENSSL_SSL_LIBRARY="${LIBSSL_PATH}" \
+        -DOPENSSL_INCLUDE_DIR="${OPENSSL_ROOT}/include"
+    cmake --build _build -- -j${BUILD_JOBS}
+    cmake --install _build
+
+    local OQS_PROVIDER_MODULE
+    OQS_PROVIDER_MODULE=$(find "${OQS_PREFIX}" "${OPENSSL_ROOT}" -name oqsprovider.so 2>/dev/null | head -n1 || true)
+    if [ -z "${OQS_PROVIDER_MODULE}" ]; then
+        echo -e "${RED}✗ oqs-provider build failed: module not found${NC}"
+        exit 1
+    fi
+
+    export OPENSSL_MODULES="$(dirname "${OQS_PROVIDER_MODULE}")"
+    echo -e "${GREEN}✓ oqs-provider built${NC}"
+    echo -e "${GREEN}  OPENSSL_MODULES=${OPENSSL_MODULES}${NC}"
+
+    popd > /dev/null
+}
+
 # Clean if requested
 if [ $CLEAN -eq 1 ]; then
     echo -e "${YELLOW}Cleaning build directory...${NC}"
@@ -154,17 +245,25 @@ echo -e "${GREEN}  Build Jobs:  ${BUILD_JOBS}${NC}"
 echo -e "${GREEN}  Optimization: Meteorlake${NC}"
 echo ""
 
-./Configure dsllvm-dsmil \
-    --prefix="${PREFIX}" \
-    --openssldir="${OPENSSLDIR}" \
-    enable-ec_nistp_64_gcc_128 \
-    no-ssl3 \
-    no-weak-ssl-ciphers \
-    enable-tls1_3 \
-    no-comp \
-    --with-rand-seed=rdcpu,rdseed,devrandom \
-    threads \
+CONFIGURE_FLAGS=(
+    dsllvm-dsmil
+    --prefix="${PREFIX}"
+    --openssldir="${OPENSSLDIR}"
+    enable-ec_nistp_64_gcc_128
+    no-ssl3
+    no-weak-ssl-ciphers
+    enable-tls1_3
+    no-comp
+    --with-rand-seed=rdcpu,rdseed,devrandom
+    threads
     shared
+)
+
+if [ $WITH_OQS -eq 1 ]; then
+    CONFIGURE_FLAGS+=(enable-external-tests)
+fi
+
+./Configure "${CONFIGURE_FLAGS[@]}"
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}✗ Configure failed${NC}"
@@ -186,6 +285,11 @@ fi
 
 echo -e "${GREEN}✓ Build complete${NC}"
 echo ""
+
+# Optional: build oqs-provider (liboqs + provider module)
+if [ $WITH_OQS -eq 1 ]; then
+    build_oqs_provider "dsmil"
+fi
 
 # Test if requested
 if [ $TEST -eq 1 ]; then
@@ -245,6 +349,10 @@ echo -e "  Compiler:    $(dsclang --version | head -1)"
 echo -e "  Prefix:      ${PREFIX}"
 echo -e "  PQC:         Mandatory hybrid (ML-KEM + ECDHE, ML-DSA + ECDSA)"
 echo -e "  Security:    Constant-time enforcement, side-channel alerts"
+if [ $WITH_OQS -eq 1 ]; then
+    echo -e "  oqs-provider: enabled (OPENSSL_MODULES=${OPENSSL_MODULES})"
+    echo -e "  oqs-provider conf: ${PWD}/configs/oqs-provider.cnf"
+fi
 echo ""
 
 if [ $INSTALL -ne 1 ]; then

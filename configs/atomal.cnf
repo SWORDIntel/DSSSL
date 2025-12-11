@@ -26,6 +26,7 @@ default = default_sect
 base = base_sect
 # PQC provider is MANDATORY
 pqc = pqc_sect
+oqsprovider = oqs_sect
 # Policy provider enforces ATOMAL requirements
 dsmil-policy = dsmil_policy_sect
 
@@ -40,9 +41,13 @@ activate = 1
 # Built-in ML-KEM and ML-DSA implementations
 # ATOMAL uses ML-KEM-1024 and ML-DSA-87 for maximum security
 
+[oqs_sect]
+activate = 1
+module = $ENV::OPENSSL_MODULES/oqsprovider.so
+
 [dsmil_policy_sect]
 activate = 1
-module = /opt/openssl-dsmil/lib64/ossl-modules/dsmil-policy.so
+module = $ENV::OPENSSL_MODULES/dsmil-policy.so
 profile = ATOMAL
 event_socket = /run/crypto-events.sock
 threatcon_env = THREATCON_LEVEL

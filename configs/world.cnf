@@ -24,10 +24,8 @@ alg_section = algorithm_sect
 [provider_sect]
 default = default_sect
 base = base_sect
-# PQC provider is loaded but optional for WORLD_COMPAT
-# Uncomment to enable opportunistic PQC:
-# pqc = pqc_sect
-# Policy provider will be added in Phase 2
+oqsprovider = oqs_sect
+# Optional: policy provider can be added later
 # dsmil-policy = dsmil_policy_sect
 
 [default_sect]
@@ -36,10 +34,16 @@ activate = 1
 [base_sect]
 activate = 1
 
-# Uncomment to enable PQC provider
-# [pqc_sect]
+[oqs_sect]
+activate = 1
+module = $ENV::OPENSSL_MODULES/oqsprovider.so
+
+# [dsmil_policy_sect]
 # activate = 1
-# module = /opt/openssl-world/lib64/ossl-modules/pqc-provider.so
+# module = $ENV::OPENSSL_MODULES/dsmil-policy.so
+# profile = WORLD_COMPAT
+# event_socket = /run/crypto-events.sock
+# threatcon_env = THREATCON_LEVEL
 
 # [dsmil_policy_sect]
 # activate = 1

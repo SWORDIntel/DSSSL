@@ -23,6 +23,7 @@ alg_section = algorithm_sect
 [provider_sect]
 default = default_sect
 base = base_sect
+oqsprovider = oqs_sect
 # PQC provider is MANDATORY for DSMIL_SECURE
 pqc = pqc_sect
 # Policy provider enforces hybrid requirements
@@ -36,12 +37,15 @@ activate = 1
 
 [pqc_sect]
 activate = 1
-# Built-in ML-KEM and ML-DSA implementations
-# No external module needed (compiled into libcrypto)
+# Built-in ML-KEM and ML-DSA implementations (libcrypto)
+
+[oqs_sect]
+activate = 1
+module = $ENV::OPENSSL_MODULES/oqsprovider.so
 
 [dsmil_policy_sect]
 activate = 1
-module = /opt/openssl-dsmil/lib64/ossl-modules/dsmil-policy.so
+module = $ENV::OPENSSL_MODULES/dsmil-policy.so
 profile = DSMIL_SECURE
 event_socket = /run/crypto-events.sock
 threatcon_env = THREATCON_LEVEL
