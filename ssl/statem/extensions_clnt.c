@@ -62,6 +62,11 @@ EXT_RETURN tls_construct_ctos_renegotiate(SSL_CONNECTION *s, WPACKET *pkt,
                                           unsigned int context, X509 *x,
                                           size_t chainidx)
 {
+    /* Mark unused parameters to avoid DSLLVM warnings */
+    (void)context;
+    (void)x;
+    (void)chainidx;
+
     if (!s->renegotiate) {
         /* If not renegotiating, send an empty RI extension to indicate support */
 
@@ -2176,6 +2181,11 @@ int tls_parse_stoc_key_share(SSL_CONNECTION *s, PACKET *pkt,
         unsigned char *saved_pms = NULL;
         size_t saved_pmslen = 0;
 
+        /* Mark unused variables to avoid DSLLVM warnings */
+        (void)hybrid_ct;
+        (void)saved_pms;
+        (void)saved_pmslen;
+
         /* Get component group IDs */
         classical_group_id = get_classical_group_from_hybrid(group_id);
         pqc_group_id = get_pqc_group_from_hybrid(group_id);
@@ -2195,7 +2205,7 @@ int tls_parse_stoc_key_share(SSL_CONNECTION *s, PACKET *pkt,
         }
 
         /* Parse hybrid ciphertext: [classical_len][classical_ct][pqc_len][pqc_ct] */
-        if (!PACKET_get_net_2(&encoded_pt, &classical_ctlen) ||
+        if (!PACKET_get_net_2_len(&encoded_pt, &classical_ctlen) ||
             classical_ctlen == 0 || classical_ctlen > PACKET_remaining(&encoded_pt)) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
             return 0;
@@ -2206,7 +2216,7 @@ int tls_parse_stoc_key_share(SSL_CONNECTION *s, PACKET *pkt,
             return 0;
         }
 
-        if (!PACKET_get_net_2(&encoded_pt, &pqc_ctlen) ||
+        if (!PACKET_get_net_2_len(&encoded_pt, &pqc_ctlen) ||
             pqc_ctlen == 0 || pqc_ctlen > PACKET_remaining(&encoded_pt)) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
             return 0;
@@ -2537,6 +2547,11 @@ int tls_parse_stoc_server_cert_type(SSL_CONNECTION *sc, PACKET *pkt,
                                     X509 *x, size_t chainidx)
 {
     unsigned int type;
+
+    /* Mark unused parameters to avoid DSLLVM warnings */
+    (void)context;
+    (void)x;
+    (void)chainidx;
 
     if (PACKET_remaining(pkt) != 1) {
         SSLfatal(sc, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);

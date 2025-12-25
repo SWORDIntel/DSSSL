@@ -15,6 +15,46 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_PREFIX="${INSTALL_PREFIX:-/usr/local}"
 BACKUP_DIR="${BACKUP_DIR:-/opt/dsssl-backup-$(date +%Y%m%d-%H%M%S)}"
 LOG_FILE="${LOG_FILE:-/var/log/dsssl-install.log}"
+FORCE_INSTALL="${FORCE_INSTALL:-0}"
+BUILD_LIBSSL11="${BUILD_LIBSSL11:-0}"
+LIBSSL11_PREFIX="${LIBSSL11_PREFIX:-/usr}"  # Default to system install for libssl1.1
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --force|--yes|-y)
+            FORCE_INSTALL=1
+            shift
+            ;;
+        --prefix=*)
+            INSTALL_PREFIX="${1#*=}"
+            shift
+            ;;
+        --with-libssl11)
+            BUILD_LIBSSL11=1
+            shift
+            ;;
+        --libssl11-prefix=*)
+            LIBSSL11_PREFIX="${1#*=}"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [options]"
+            echo "Options:"
+            echo "  --force, --yes, -y         Skip interactive confirmation"
+            echo "  --prefix=PATH              Installation prefix (default: /usr/local)"
+            echo "  --with-libssl11             Build and install libssl1.1 as system default OpenSSL"
+            echo "  --libssl11-prefix=PATH      Installation prefix for libssl1.1 (default: /usr - system default)"
+            echo "  --help, -h                  Show this help"
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -64,6 +104,8 @@ detect_openssl() {
     OPENSSL_LIBS=(
         "libssl.so"
         "libcrypto.so"
+        "libssl.so.4"
+        "libcrypto.so.4"
         "libssl.so.3"
         "libcrypto.so.3"
         "libssl.so.1.1"
@@ -131,18 +173,19 @@ create_backup() {
 # Build DSSSL if needed
 build_dsssl() {
     log_info "Checking DSSSL build status..."
-    
-    if [[ ! -f "$SCRIPT_DIR/.openssl/libssl.so" ]] && [[ ! -f "$SCRIPT_DIR/.openssl/libssl.so.3" ]]; then
+
+    # Check for DSSSL libraries in current directory (where we built them)
+    if [[ ! -f "$SCRIPT_DIR/libssl.so.4" ]] && [[ ! -f "$SCRIPT_DIR/libssl.so" ]]; then
         log_warn "DSSSL not built. Building now..."
-        
+
         if [[ ! -f "$SCRIPT_DIR/util/build-dsllvm-world.sh" ]]; then
             log_error "Build script not found. Please build DSSSL first."
             exit 1
         fi
-        
+
         cd "$SCRIPT_DIR"
         ./util/build-dsllvm-world.sh --clean
-        
+
         if [[ $? -ne 0 ]]; then
             log_error "DSSSL build failed"
             exit 1
@@ -152,26 +195,67 @@ build_dsssl() {
     fi
 }
 
+# Build libssl1.1 if requested
+build_libssl11() {
+    if [[ $BUILD_LIBSSL11 -eq 1 ]]; then
+        log_info "Building libssl1.1 with DSLLVM..."
+
+        if [[ ! -f "$SCRIPT_DIR/util/build-libssl1.1-dsllvm.sh" ]]; then
+            log_error "libssl1.1 build script not found"
+            exit 1
+        fi
+
+        if [[ ! -d "$SCRIPT_DIR/openssl-1.1.1" ]]; then
+            log_error "OpenSSL 1.1.1 source not found. Please add it to the repository."
+            exit 1
+        fi
+
+        cd "$SCRIPT_DIR"
+        if [[ "$LIBSSL11_PREFIX" == "/usr" ]]; then
+            # System install - make libssl1.1 the default system OpenSSL
+            log_info "Installing libssl1.1 as system default OpenSSL with DSSSL hardening..."
+            ./util/build-libssl1.1-dsllvm.sh --clean --system-install --install
+        else
+            # Custom prefix install
+            ./util/build-libssl1.1-dsllvm.sh --clean --prefix="$LIBSSL11_PREFIX" --install
+        fi
+
+        if [[ $? -ne 0 ]]; then
+            log_error "libssl1.1 build failed"
+            exit 1
+        fi
+
+        log_info "libssl1.1 built and installed successfully"
+
+        # Provide guidance on header usage
+        if [[ "$LIBSSL11_PREFIX" == "/usr" ]]; then
+            log_info "Header usage:"
+            log_info "  - DSSSL 4.x headers: $INSTALL_PREFIX/include/openssl"
+            log_info "  - libssl1.1 headers: /usr/include/openssl-1.1 (symlinked to /usr/include/openssl)"
+        fi
+    fi
+}
+
 # Install DSSSL
 install_dsssl() {
     log_info "Installing DSSSL..."
     
     cd "$SCRIPT_DIR"
     
-    # Determine build directory
-    BUILD_DIR=".openssl"
-    if [[ ! -d "$BUILD_DIR" ]]; then
-        BUILD_DIR="build"
-    fi
-    
-    if [[ ! -d "$BUILD_DIR" ]]; then
-        log_error "Build directory not found"
+    # Check for built files in current directory (where we built DSSSL)
+    if [[ ! -f "$SCRIPT_DIR/apps/openssl" ]]; then
+        log_error "DSSSL openssl binary not found. Please build DSSSL first."
         exit 1
     fi
-    
+
+    if [[ ! -f "$SCRIPT_DIR/libssl.so.4" ]]; then
+        log_error "DSSSL libraries not found. Please build DSSSL first."
+        exit 1
+    fi
+
     # Install binaries
     log_info "Installing binaries..."
-    install -m 755 "$BUILD_DIR/apps/openssl" "$INSTALL_PREFIX/bin/openssl"
+    install -m 755 "$SCRIPT_DIR/apps/openssl" "$INSTALL_PREFIX/bin/openssl"
     
     # Create symlink if /usr/bin/openssl exists
     if [[ -f "/usr/bin/openssl" ]] && [[ "$INSTALL_PREFIX" != "/usr" ]]; then
@@ -181,32 +265,53 @@ install_dsssl() {
     
     # Install libraries
     log_info "Installing libraries..."
+
+    # Libraries are in the current directory
     
-    # Find library directory
-    LIB_DIR="$BUILD_DIR"
-    if [[ -d "$BUILD_DIR/lib" ]]; then
-        LIB_DIR="$BUILD_DIR/lib"
-    elif [[ -d "$BUILD_DIR/.libs" ]]; then
-        LIB_DIR="$BUILD_DIR/.libs"
-    fi
-    
-    # Determine system library directory
+    # Determine system library and include directories
     SYSTEM_LIB_DIR="/usr/lib"
+    SYSTEM_INCLUDE_DIR="/usr/include"
     if [[ -d "/usr/lib64" ]] && [[ $(uname -m) == "x86_64" ]]; then
         SYSTEM_LIB_DIR="/usr/lib64"
     fi
     
-    # Install libssl
-    for lib in libssl.so libssl.so.3 libcrypto.so libcrypto.so.3; do
-        if [[ -f "$LIB_DIR/$lib" ]]; then
-            install -m 755 "$LIB_DIR/$lib" "$SYSTEM_LIB_DIR/$lib"
-            
-            # Update library links
-            if [[ "$lib" == "libssl.so.3" ]]; then
-                ln -sf "$SYSTEM_LIB_DIR/libssl.so.3" "$SYSTEM_LIB_DIR/libssl.so" 2>/dev/null || true
+    # Install libssl1.1 first (system default)
+    if [[ -d "$SCRIPT_DIR/ssl1.1" ]] && [[ $BUILD_LIBSSL11 -eq 1 ]]; then
+        log_info "Installing libssl1.1 as system default..."
+
+        # Install libssl1.1 libraries
+        for lib in libssl.so.1.1 libcrypto.so.1.1; do
+            if [[ -f "$SCRIPT_DIR/ssl1.1/$lib" ]]; then
+                install -m 755 "$SCRIPT_DIR/ssl1.1/$lib" "$SYSTEM_LIB_DIR/$lib"
+
+                # Create symlinks for system compatibility
+                if [[ "$lib" == "libssl.so.1.1" ]]; then
+                    ln -sf "$SYSTEM_LIB_DIR/libssl.so.1.1" "$SYSTEM_LIB_DIR/libssl.so" 2>/dev/null || true
+                fi
+                if [[ "$lib" == "libcrypto.so.1.1" ]]; then
+                    ln -sf "$SYSTEM_LIB_DIR/libcrypto.so.1.1" "$SYSTEM_LIB_DIR/libcrypto.so" 2>/dev/null || true
+                fi
             fi
-            if [[ "$lib" == "libcrypto.so.3" ]]; then
-                ln -sf "$SYSTEM_LIB_DIR/libcrypto.so.3" "$SYSTEM_LIB_DIR/libcrypto.so" 2>/dev/null || true
+        done
+
+        # Install libssl1.1 headers
+        if [[ -d "$SCRIPT_DIR/ssl1.1/include" ]]; then
+            mkdir -p "$SYSTEM_INCLUDE_DIR"
+            cp -r "$SCRIPT_DIR/ssl1.1/include/openssl" "$SYSTEM_INCLUDE_DIR/" 2>/dev/null || true
+        fi
+    fi
+
+    # Install DSSSL libssl (OpenSSL 4.x)
+    for lib in libssl.so.4 libcrypto.so.4; do
+        if [[ -f "$SCRIPT_DIR/$lib" ]]; then
+            install -m 755 "$SCRIPT_DIR/$lib" "$SYSTEM_LIB_DIR/$lib"
+
+            # Update library links (but don't override libssl1.1 symlinks)
+            if [[ "$lib" == "libssl.so.4" ]] && [[ ! -f "$SYSTEM_LIB_DIR/libssl.so.1.1" ]]; then
+                ln -sf "$SYSTEM_LIB_DIR/libssl.so.4" "$SYSTEM_LIB_DIR/libssl.so" 2>/dev/null || true
+            fi
+            if [[ "$lib" == "libcrypto.so.4" ]] && [[ ! -f "$SYSTEM_LIB_DIR/libcrypto.so.1.1" ]]; then
+                ln -sf "$SYSTEM_LIB_DIR/libcrypto.so.4" "$SYSTEM_LIB_DIR/libcrypto.so" 2>/dev/null || true
             fi
         fi
     done
@@ -236,9 +341,9 @@ install_dsssl() {
 
     # Install include files
     log_info "Installing include files..."
-    if [[ -d "$BUILD_DIR/include/openssl" ]]; then
+    if [[ -d "$SCRIPT_DIR/include/openssl" ]]; then
         mkdir -p "$INSTALL_PREFIX/include"
-        cp -r "$BUILD_DIR/include/openssl" "$INSTALL_PREFIX/include/"
+        cp -r "$SCRIPT_DIR/include/openssl" "$INSTALL_PREFIX/include/"
     elif [[ -d "include/openssl" ]]; then
         mkdir -p "$INSTALL_PREFIX/include"
         cp -r "include/openssl" "$INSTALL_PREFIX/include/"
@@ -296,6 +401,13 @@ verify_installation() {
     log_info "Testing library loading..."
     if ldconfig -p | grep -q "libssl.so"; then
         log_info "Library loading test passed"
+        # Check which libssl is loaded
+        LIBSSL_PATH=$(ldconfig -p | grep "libssl.so" | head -1 | awk '{print $4}')
+        if [[ -n "$LIBSSL_PATH" ]] && [[ "$LIBSSL_PATH" == *"libssl.so.1.1"* ]]; then
+            log_info "✓ libssl1.1 is the active system SSL library"
+        else
+            log_info "DSSSL 4.x libssl is the active system SSL library"
+        fi
     else
         log_warn "Library loading test inconclusive"
     fi
@@ -389,6 +501,7 @@ main() {
     detect_openssl
     create_backup
     build_dsssl
+    build_libssl11
     install_dsssl
     
     if verify_installation; then
@@ -401,6 +514,26 @@ main() {
         log_info "  export OPENSSL_MODULES=${INSTALL_PREFIX}/lib64/ossl-modules"
         log_info "  export OPENSSL_CONF=${INSTALL_PREFIX}/ssl/world.cnf   # or dsmil-secure.cnf / atomal.cnf"
         log_info "  export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib64:${INSTALL_PREFIX}/lib:\$LD_LIBRARY_PATH"
+
+        if [[ $BUILD_LIBSSL11 -eq 1 ]]; then
+            log_info ""
+            if [[ "$LIBSSL11_PREFIX" == "/usr" ]]; then
+                log_info "libssl1.1 installed as system default OpenSSL with DSSSL hardening!"
+                log_info "All applications will automatically use hardened libssl1.1"
+                log_info "DSSSL 4.x remains available at: $INSTALL_PREFIX"
+                log_info ""
+                log_info "To use DSSSL 4.x specifically:"
+                log_info "  export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:\$LD_LIBRARY_PATH"
+                log_info "  export OPENSSL_MODULES=${INSTALL_PREFIX}/lib64/ossl-modules"
+                log_info "  export OPENSSL_CONF=${INSTALL_PREFIX}/ssl/world.cnf"
+            else
+                log_info "libssl1.1 also installed to: $LIBSSL11_PREFIX"
+                log_info "To use libssl1.1 specifically:"
+                log_info "  export LD_LIBRARY_PATH=${LIBSSL11_PREFIX}/lib:\$LD_LIBRARY_PATH"
+                log_info "  export PKG_CONFIG_PATH=${LIBSSL11_PREFIX}/lib/pkgconfig:\$PKG_CONFIG_PATH"
+            fi
+        fi
+
         log_info "=========================================="
     else
         log_error "Installation verification failed"

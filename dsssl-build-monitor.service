@@ -1,0 +1,24 @@
+[Unit]
+Description=DSLLVM Build Monitor Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/dsssl-build-monitor.sh monitor
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=always
+RestartSec=5
+User=root
+Environment=TEMP_HIGH_THRESHOLD_C=105
+Environment=TEMP_CRITICAL_THRESHOLD_C=110
+Environment=TEMP_LOW_THRESHOLD_C=90
+Environment=THROTTLE_JOB_PERCENT=60
+Environment=MONITOR_INTERVAL_S=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dsssl-build-monitor
+
+[Install]
+WantedBy=multi-user.target

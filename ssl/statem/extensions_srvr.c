@@ -88,6 +88,11 @@ int tls_parse_ctos_renegotiate(SSL_CONNECTION *s, PACKET *pkt,
                                unsigned int context,
                                X509 *x, size_t chainidx)
 {
+    /* Mark unused parameters to avoid DSLLVM warnings */
+    (void)context;
+    (void)x;
+    (void)chainidx;
+
     unsigned int ilen;
     const unsigned char *data;
     int ok;
@@ -679,6 +684,10 @@ static int tls_accept_ksgroup(SSL_CONNECTION *s, uint16_t ksgroup, PACKET *encod
     if (is_hybrid_kem_group(ksgroup)) {
         PACKET classical_pubkey, pqc_pubkey;
         uint16_t classical_group_id, pqc_group_id;
+
+        /* Mark unused variables to avoid DSLLVM warnings */
+        (void)classical_pubkey;
+        (void)pqc_pubkey;
         EVP_PKEY *classical_peer = NULL, *pqc_peer = NULL;
         int ret = 0;
 
@@ -696,9 +705,13 @@ static int tls_accept_ksgroup(SSL_CONNECTION *s, uint16_t ksgroup, PACKET *encod
         const unsigned char *pqc_pubkey_data = NULL;
         size_t classical_len, pqc_len;
         PACKET classical_pkt, pqc_pkt;
+
+        /* Mark unused variables to avoid DSLLVM warnings */
+        (void)classical_pkt;
+        (void)pqc_pkt;
         
         /* Extract classical public key length and data */
-        if (!PACKET_get_net_2(encoded_pubkey, &classical_len) ||
+        if (!PACKET_get_net_2_len(encoded_pubkey, &classical_len) ||
             classical_len == 0 || classical_len > PACKET_remaining(encoded_pubkey)) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
             return 0;
@@ -710,7 +723,7 @@ static int tls_accept_ksgroup(SSL_CONNECTION *s, uint16_t ksgroup, PACKET *encod
         }
         
         /* Extract PQC public key length and data */
-        if (!PACKET_get_net_2(encoded_pubkey, &pqc_len) ||
+        if (!PACKET_get_net_2_len(encoded_pubkey, &pqc_len) ||
             pqc_len == 0 || pqc_len > PACKET_remaining(encoded_pubkey)) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_KEY_SHARE);
             return 0;
@@ -1729,6 +1742,11 @@ EXT_RETURN tls_construct_stoc_renegotiate(SSL_CONNECTION *s, WPACKET *pkt,
                                           unsigned int context, X509 *x,
                                           size_t chainidx)
 {
+    /* Mark unused parameters to avoid DSLLVM warnings */
+    (void)context;
+    (void)x;
+    (void)chainidx;
+
     if (!s->s3.send_connection_binding)
         return EXT_RETURN_NOT_SENT;
 
@@ -2144,6 +2162,9 @@ EXT_RETURN tls_construct_stoc_key_share(SSL_CONNECTION *s, WPACKET *pkt,
         uint16_t classical_group_id, pqc_group_id;
         int ret = 0;
 
+        /* Mark unused variables to avoid DSLLVM warnings */
+        (void)ret;
+
         /* Get component group IDs */
         classical_group_id = get_classical_group_from_hybrid(s->s3.group_id);
         pqc_group_id = get_pqc_group_from_hybrid(s->s3.group_id);
@@ -2173,6 +2194,9 @@ EXT_RETURN tls_construct_stoc_key_share(SSL_CONNECTION *s, WPACKET *pkt,
         /* Save current PMS state if any */
         unsigned char *saved_pms = NULL;
         size_t saved_pmslen = 0;
+
+        /* Mark unused variable to avoid DSLLVM warnings */
+        (void)saved_pmslen;
         if (s->s3.tmp.pms != NULL && s->s3.tmp.pmslen > 0) {
             saved_pms = OPENSSL_memdup(s->s3.tmp.pms, s->s3.tmp.pmslen);
             saved_pmslen = s->s3.tmp.pmslen;
